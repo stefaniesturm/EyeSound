@@ -1,0 +1,6 @@
+function [key,time,messages,times] = getmidiresp()
+
+[messages,times] = midi_interface();
+press = find(messages(1,:) == 144);
+key = messages(2,press);
+time = times(press);

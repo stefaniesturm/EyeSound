@@ -1,0 +1,3 @@
+Subject Level Block Trial Condition TrialType EventType EventTime SoundID AnimationID MovDir Congruency Response 
+1	1	NaN	NaN	2	NaN	1	3.559329e+00	NaN	NaN	NaN	NaN	NaN
+1	1	1	NaN	2	1	1	5.066467e+00	NaN	NaN	NaN	NaN	NaN
