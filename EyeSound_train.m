@@ -10,15 +10,15 @@ function EyeSound_train(iSub, iContingency)
 %                                  SETUP
 % -------------------------------------------------------------------------
 %
-location = 2; % 1 for home, 2 for lab
+location = 1; % 1 for home, 2 for lab
 % Do you want to control the amount of sounds played during acquisition by
 % making the cursor disappear for one second after a sound is played?
-control_speed = 1; % 1 for yes and 0 for no
 % Indicate hardware used for this run
-nano_exist = 1; % Turn on if you want to use Nanopad instead of keyboard
+nano_exist = 0; % Turn on if you want to use Nanopad instead of keyboard
 port_exist = 0; % Never during training!
 headphones = 0; % In the lab, this should be 1, at home, it should be 0
 dummymode = 1; % 0 if you are using eye tracker, 1 if you are using mouse
+training = 1;
 if location == 2
     % In the lab
     cd 'C:\USER\Stefanie\EyeSound\';
@@ -38,8 +38,8 @@ end
 % Load matrix with info on stimuli
 load('EyeSound_data.mat'); % Load the matrix that contains info about stimuli
 
-nTests = 3;
-nBlocks = 7; % Should be 7
+nTests = 1;
+nBlocks = 1; % Should be 7
 MaxResp = 2.5; % Maximum response time for questions in s
 AcquisitionDur = 20; % 20sec for acquisition trials, less for debugging
 ttCounter = 0; % This counter counts the blocks in a continuous way instead of restarting from 1 every time we change the level. This is important because to index the test trial matrix, we need this number
@@ -57,7 +57,7 @@ screenNumber=max(Screen('Screens'));
 white = [1 1 1];
 black = [0 0 0];
 red = [1 0 0];
-%window_size = [0 0 400 400]; % small window for debugging; comment out if fullscreen is wanted
+window_size = [0 0 400 400]; % small window for debugging; comment out if fullscreen is wanted
 
 % Open an on screen window and color it black
 % try
@@ -85,16 +85,13 @@ dotBig = 180;
 dotBlack = black;
 dotSmall = 30;
 
-
-
 % Initialise variables necessary for playing sounds based on movements
 % (it's very complicated)
 lastStop = 0;
 moveDirection = -1;
-% oldmoveDirection = -1;
 previousStop = -1;
 currentMouse = [-1 -1];
-soundPlayed = 0;
+soundPlayed = 0; % Sound identity (Factor)
 
 % This is needed for the animations
 speed = 7.5; % This is how fast animation moves!!!
@@ -177,32 +174,10 @@ end
 % Event logfile (cues, sounds, responses)
 eventlogfilename = [Results_path sprintf('%02d', iSub) 'events.txt'];
 LOGFILEevents = fopen(eventlogfilename, 'w'); % Overwrite!
-headers={'Subject ', 'Level ', 'Block ', 'Trial ', 'Condition ', 'TrialType ', 'EventType ', 'EventTime ', 'SoundID ', 'AnimationID ', 'MovDir ', 'Congruency ', 'Response '}; % Add one row of headers to the logfile
+headers={'Subject ', 'Contingency ', 'Block ', 'Trial ', 'Condition ', 'TrialType ', 'EventType ', 'EventTime ', 'SoundID ', 'AnimationID ', 'MovDir ', 'Congruency ', 'Response '}; % Add one row of headers to the logfile
 for iHeader = 1:length(headers)
     fprintf(LOGFILEevents,'%s', headers{iHeader});
 end
-
-%     % -------------------------------------------------------------------------
-%     %                          PREPARE AUDIO DEVICE
-%     % -------------------------------------------------------------------------
-%
-%     % Start the audio device:
-%     nrchannels = 2; % We want the sound output to be stereo
-%     FS = 96000;
-%     device = [];
-%     InitializePsychSound; % Initialize the sound device
-%
-%     headphone_factor = 0.750; % I chose this because it's in the middle between two that were used in IluAg
-%     starting_dB = 70;
-%     intfactor = 10^((starting_dB-100)/20)*headphone_factor;
-%
-%     if headphones == 0
-%         paHandle = PsychPortAudio('Open', device, [], 0, FS, nrchannels); % On my computer at home
-%     elseif headphones == 1
-%         % In the lab use this:
-%         paHandle = PsychPortAudio('Open',[],1,3,FS,2, [], [], [6 7]); % Open the Audio port and get a handle to refer to it in subsequent calls
-%         % [6 7] are the headphones channels in the lab
-%     end
 
 %----------------------------------------------------------------------
 %                       Start eyetracker
@@ -225,7 +200,6 @@ if dummymode == 0
         cleanup;  % cleanup function
         return;
     end
-    
     
     % the following code is used to check the version of the eye tracker
     % and version of the host software
@@ -290,6 +264,13 @@ if dummymode == 0
     end
 end
 
+%----------------------------------------------------------------------
+%                           Start porttalk
+%----------------------------------------------------------------------
+if port_exist == 1
+    config_io('open')
+end
+
 % -------------------------------------------------------------------------
 %                          PREPARE AUDIO DEVICE
 % -------------------------------------------------------------------------
@@ -311,12 +292,7 @@ elseif headphones == 1
     paHandle = PsychPortAudio('Open',[],1,3,FS,2, [], [], [6 7]); % Open the Audio port and get a handle to refer to it in subsequent calls
     % [6 7] are the headphones channels in the lab
 end
-%----------------------------------------------------------------------
-%                           Start porttalk
-%----------------------------------------------------------------------
-if port_exist == 1
-    config_io('open')
-end
+
 % -------------------------------------------------------------------------
 %                              INSTRUCTIONS
 % -------------------------------------------------------------------------
@@ -339,7 +315,7 @@ for iInstr = 1:length(Instructions)
         KbStrokeWait;
     elseif nano_exist == 1 % If you are using the nanopad, wait for press on that
         % Clear any accidental presses before the instruction appeared
-        [key,time,messages,Ts] = getmidiresp(); %
+        [key,~,~,~] = getmidiresp(); %
         key = [];
         while isempty(key)
             [key,~,~,~] = getmidiresp(); % keep checking for response
@@ -365,37 +341,6 @@ TrainingStart = GetSecs;
 condition = 1; % Training is always active
 contingencies(iContingency) = 1; % We need this so the active script is activated
 ContingencyStartTrigger = 254;
-
-% if dummymode == 0
-%     Eyelink('Message', 'New level: %d.', iContingency);
-%     Eyelink('Message', 'TRIGGER %03d', ContingencyStartTrigger);
-%     % The message below will be shown on the host PC
-%     Eyelink('command', 'record_status_message "TRAINING %d/%d"', iContingency, length(contingencies));
-%     % Before recording, we place reference graphics on the host display
-%     % Must be offline to draw to EyeLink screen
-%     Eyelink('Command', 'set_idle_mode');
-%     
-%     % clear tracker display and draw box at center
-%     Eyelink('Command', 'clear_screen 0')
-%     Eyelink('command', 'draw_box %d %d %d %d 15', screenXpixels/2-50, screenYpixels/2-50, screenXpixels/2+50, screenYpixels/2+50);
-%     
-%     % start recording eye position (preceded by a short pause so that
-%     % the tracker can finish the mode transition)
-%     % The paramerters for the 'StartRecording' call controls the
-%     % file_samples, file_events, link_samples, link_events availability
-%     Eyelink('Command', 'set_idle_mode');
-%     WaitSecs(0.05);
-%     Eyelink('StartRecording');
-%     eye_used = Eyelink('EyeAvailable'); % get eye that's tracked
-%     % returns 0 (LEFT_EYE), 1 (RIGHT_EYE) or 2 (BINOCULAR) depending on what data is
-%     if eye_used == 2
-%         eye_used = 0; % use the left_eye data
-%     end
-%     % record a few samples before we actually start displaying
-%     % otherwise you may lose a few msec of data
-%     WaitSecs(0.1);
-%     
-% end
 
 % Load sounds to be used in this block corresponding to the movement moveDirectionections
 SoundNames = EyeSound_data(iSub).Contingencies(iContingency,:);
@@ -428,18 +373,18 @@ end
 
 % 4. Write into logfile
 fprintf(LOGFILEevents,'\n%d', iSub);
-fprintf(LOGFILEevents,'\t%d', iContingency);
-fprintf(LOGFILEevents,'\tNA'); % iBlock
-fprintf(LOGFILEevents,'\tNA'); % Trial number
+fprintf(LOGFILEevents,'\t%d', iContingency-1);
+fprintf(LOGFILEevents,'\tNaN'); % iBlock
+fprintf(LOGFILEevents,'\tNaN'); % Trial number
 fprintf(LOGFILEevents,'\t%d', condition); % Condition: actively or passively learned?
-fprintf(LOGFILEevents,'\tNA'); % TrialType
+fprintf(LOGFILEevents,'\tNaN'); % TrialType
 fprintf(LOGFILEevents,'\t%d', 1); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
 fprintf(LOGFILEevents,'\t%d', ContingencyStartTime-TrainingStart); % event time
-fprintf(LOGFILEevents,'\tNA'); % SoundID
-fprintf(LOGFILEevents,'\tNA'); % AnimationID
-fprintf(LOGFILEevents,'\tNA'); % MovDir
-fprintf(LOGFILEevents,'\tNA'); % Congruency
-fprintf(LOGFILEevents,'\tNA'); % Response
+fprintf(LOGFILEevents,'\tNaN'); % SoundID
+fprintf(LOGFILEevents,'\tNaN'); % AnimationID
+fprintf(LOGFILEevents,'\tNaN'); % MovDir
+fprintf(LOGFILEevents,'\tNaN'); % Congruency
+fprintf(LOGFILEevents,'\tNaN'); % Response
 
 % END REPORT
 
@@ -508,18 +453,18 @@ for iBlock = 1:nBlocks
     
     % 4. Write into logfile
     fprintf(LOGFILEevents,'\n%d', iSub);
-    fprintf(LOGFILEevents,'\t%d', iContingency);
+    fprintf(LOGFILEevents,'\t%d', iContingency-1);
     fprintf(LOGFILEevents,'\t%d', iBlock); % iBlock
-    fprintf(LOGFILEevents,'\tNA'); % Trial number
+    fprintf(LOGFILEevents,'\tNaN'); % Trial number
     fprintf(LOGFILEevents,'\t%d', condition); % Condition: actively or passively learned?
     fprintf(LOGFILEevents,'\t%d', TrialType); % TrialType: 1 = acquisition, 2 = test
     fprintf(LOGFILEevents,'\t%d', 1); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
     fprintf(LOGFILEevents,'\t%d', AcquisitionStartTime-TrainingStart); % event time
-    fprintf(LOGFILEevents,'\tNA'); % SoundID
-    fprintf(LOGFILEevents,'\tNA'); % AnimationID
-    fprintf(LOGFILEevents,'\tNA'); % MovDir
-    fprintf(LOGFILEevents,'\tNA'); % Congruency
-    fprintf(LOGFILEevents,'\tNA'); % Response
+    fprintf(LOGFILEevents,'\tNaN'); % SoundID
+    fprintf(LOGFILEevents,'\tNaN'); % AnimationID
+    fprintf(LOGFILEevents,'\tNaN'); % MovDir
+    fprintf(LOGFILEevents,'\tNaN'); % Congruency
+    fprintf(LOGFILEevents,'\tNaN'); % Response
     
     % END REPORT
     
@@ -532,10 +477,10 @@ for iBlock = 1:nBlocks
     % TRY THIS: Start recording eye position now, after the final drift
         % correction
         if dummymode == 0
-            Eyelink('Message', 'New level: %d.', iContingency);
+            Eyelink('Message', 'New level: %d.', iContingency-1);
             Eyelink('Message', 'TRIGGER %03d', ContingencyStartTrigger);
             % The message below will be shown on the host PC
-            Eyelink('command', 'record_status_message "TRAINING %d/%d"', iContingency, length(contingencies));
+            Eyelink('command', 'record_status_message "TRAINING %d/%d"', iContingency-1, length(contingencies));
             % Before recording, we place reference graphics on the host display
             % Must be offline to draw to EyeLink screen
             Eyelink('Command', 'set_idle_mode');
@@ -561,13 +506,18 @@ for iBlock = 1:nBlocks
             WaitSecs(0.1);
             
         end
-    while conditional == 1 % start while loop for acquisition trials
-        disp('conditional started');
         
+        % Prepare the timer that plays sound with delay of 1 sec
+        soundTimer = timer;
+        soundTimer.StartDelay = 1;
+        soundTimer.TimerFcn = @(x, y)eval(PsychPortAudio('Start', paHandle, 1));
+        reportTimer = timer;
+        reportTimer.StartDelay = 1;
+    
+    while conditional == 1 % start while loop for acquisition trials        
         conditional = (GetSecs-AcquisitionStartTime < AcquisitionDur); % Active trials end when the time is up
-        
         if dummymode == 0
-            error=Eyelink('CheckRecording')
+            error=Eyelink('CheckRecording');
             if(error~=0)
                 break;
             end
@@ -606,7 +556,6 @@ for iBlock = 1:nBlocks
         % Draw the cursor as a white dot
         Screen('DrawDots', window, [xMouse yMouse], 20, white, [], 2);
         HideCursor;
-        disp('eye position retrieved');
         % Make the squares size relative to the gap size
         squareSize = gap/3; % This is the area that will be responsive when you hover over it
         
@@ -800,8 +749,6 @@ for iBlock = 1:nBlocks
             currentMouse = [xMouse yMouse];
             soundPlayed = 0;
         end
-        
-                disp('about to flip');
         if contingencies(iContingency) == 2 % Animate
             vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
         else
@@ -814,81 +761,67 @@ for iBlock = 1:nBlocks
             PsychPortAudio('Stop', paHandle);
             switch (moveDirection)
                 case 1
+                    stop(soundTimer); % Interrupt timers if already running
+                    stop(reportTimer);
                     PsychPortAudio('FillBuffer', paHandle, tone{1});
+                    start(soundTimer) % Start new timer for current sound
+                    reportTimer.TimerFcn = @(x,y)report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, TrainingStart, dummymode, port_exist, LOGFILEevents, training);
+                    start(reportTimer) % This timer writes into logfile
                 case 2
+                    stop(soundTimer); % Interrupt timers if already running
+                    stop(reportTimer);
                     PsychPortAudio('FillBuffer', paHandle, tone{2});
+                    start(soundTimer) % Start new timer for current sound
+                    reportTimer.TimerFcn = @(x,y)report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, TrainingStart, dummymode, port_exist, LOGFILEevents, training);
+                    start(reportTimer) % This timer writes into logfile
                 case 3
+                    stop(soundTimer); % Interrupt timers if already running
+                    stop(reportTimer);
                     PsychPortAudio('FillBuffer', paHandle, tone{3});
+                    start(soundTimer) % Start new timer for current sound
+                    reportTimer.TimerFcn = @(x,y)report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, TrainingStart, dummymode, port_exist, LOGFILEevents, training);
+                    start(reportTimer) % This timer writes into logfile
                 case 4
+                    stop(soundTimer); % Interrupt timers if already running
+                    stop(reportTimer);
                     PsychPortAudio('FillBuffer', paHandle, tone{4});
+                    start(soundTimer) % Start new timer for current sound
+                    reportTimer.TimerFcn = @(x,y)report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, TrainingStart, dummymode, port_exist, LOGFILEevents, training);
+                    start(reportTimer) % This timer writes into logfile
                 case 5
+                    stop(soundTimer); % Interrupt timers if already running
+                    stop(reportTimer);
                     PsychPortAudio('FillBuffer', paHandle, tone{5});
+                    start(soundTimer) % Start new timer for current sound
+                    reportTimer.TimerFcn = @(x,y)report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, TrainingStart, dummymode, port_exist, LOGFILEevents, training);
+                    start(reportTimer) % This timer writes into logfile
                 case 6
+                    stop(soundTimer); % Interrupt timers if already running
+                    stop(reportTimer);
                     PsychPortAudio('FillBuffer', paHandle, tone{6});
+                    start(soundTimer) % Start new timer for current sound
+                    reportTimer.TimerFcn = @(x,y)report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, TrainingStart, dummymode, port_exist, LOGFILEevents, training);
+                    start(reportTimer) % This timer writes into logfile
                 case 7
+                    stop(soundTimer); % Interrupt timers if already running
+                    stop(reportTimer);
                     PsychPortAudio('FillBuffer', paHandle, tone{7});
+                    start(soundTimer) % Start new timer for current sound
+                    reportTimer.TimerFcn = @(x,y)report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, TrainingStart, dummymode, port_exist, LOGFILEevents, training);
+                    start(reportTimer) % This timer writes into logfile
                 case 8
+                    stop(soundTimer); % Interrupt timers if already running
+                    stop(reportTimer);
                     PsychPortAudio('FillBuffer', paHandle, tone{8});
-            end
-            if moveDirection ~= -1
-                soundID = moveDirection;
-                acquisitionSound = GetSecs;
-                PsychPortAudio('Start', paHandle, 1); %change to 0 for infinite reps
-                
-                if control_speed == 1
-                    % Make the cursor disappear for a second after a sound is
-                    % played
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    Screen('Flip', window);
-                    WaitSecs(1);
-                end
-                % REPORT EVENT: SOUND %
-                
-                % 1. Create trigger
-                
-                AcquisitionSoundTrigger = str2double([ '0' sprintf('%d%d', contingencies(iContingency), iBlock)]);
-                
-                % 2. Send porttalk trigger
-                if port_exist == 1
-                    porttalk(hex2dec('CFB8'), AcquisitionSoundTrigger, 1000);
-                end
-                
-                % 3. Send Eyelink message
-                if dummymode == 0
-                    Eyelink('Message', 'Acquisition sound played.');
-                    Eyelink('Message', 'TRIGGER %03d', AcquisitionSoundTrigger);
-                end
-                
-                % 4. Write into logfile
-                fprintf(LOGFILEevents,'\n%d', iSub);
-                fprintf(LOGFILEevents,'\t%d', iContingency);
-                fprintf(LOGFILEevents,'\t%d', iBlock); % iBlock
-                fprintf(LOGFILEevents,'\tNA'); % Trial number
-                fprintf(LOGFILEevents,'\t%d', condition); % Condition: actively or passively learned?
-                fprintf(LOGFILEevents,'\t%d', TrialType); % TrialType: 1 = acquisition, 2 = test
-                fprintf(LOGFILEevents,'\t%d', 2); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
-                fprintf(LOGFILEevents,'\t%d', acquisitionSound-TrainingStart); % event time
-                fprintf(LOGFILEevents,'\t%d', soundID); % SoundID
-                fprintf(LOGFILEevents,'\tNA'); % AnimationID
-                fprintf(LOGFILEevents,'\tNA'); % MovDir
-                fprintf(LOGFILEevents,'\tNA'); % Congruency
-                fprintf(LOGFILEevents,'\tNA'); % Response
-                
-                % END REPORT
-                
-                soundPlayed = moveDirection;
-            end
-        end
-%         disp('about to flip');
-%         if contingencies(iContingency) == 2 % Animate
-%             vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-%         else
-%             Screen('Flip', window); % Use mouse coordinates
-%         end
-        
+                    start(soundTimer) % Start new timer for current sound
+                    reportTimer.TimerFcn = @(x,y)report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, TrainingStart, dummymode, port_exist, LOGFILEevents, training);
+                    start(reportTimer) % This timer writes into logfile
+            end % switch
+        end % if lastStop is not previousStop
     end % Acquisition trial
-    
+    % Stop timers that are still running
+    stop(soundTimer);
+    stop(reportTimer);
     % End exploring
     Screen('TextSize', window, 60);
     DrawFormattedText(window, '¡Se acabó el tiempo!', 'center', 'center',white);
@@ -914,18 +847,18 @@ for iBlock = 1:nBlocks
     
     % 4. Write into logfile
     fprintf(LOGFILEevents,'\n%d', iSub);
-    fprintf(LOGFILEevents,'\t%d', iContingency);
+    fprintf(LOGFILEevents,'\t%d', iContingency-1);
     fprintf(LOGFILEevents,'\t%d', iBlock); % iBlock
-    fprintf(LOGFILEevents,'\tNA'); % Trial number
+    fprintf(LOGFILEevents,'\tNaN'); % Trial number
     fprintf(LOGFILEevents,'\t%d', condition); % Condition: actively or passively learned?
     fprintf(LOGFILEevents,'\t%d', TrialType); % TrialType: 1 = acquisition, 2 = test
     fprintf(LOGFILEevents,'\t%d', 1); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
     fprintf(LOGFILEevents,'\t%d', endExplore-TrainingStart); % event time
-    fprintf(LOGFILEevents,'\tNA'); % SoundID
-    fprintf(LOGFILEevents,'\tNA'); % AnimationID
-    fprintf(LOGFILEevents,'\tNA'); % MovDir
-    fprintf(LOGFILEevents,'\tNA'); % Congruency
-    fprintf(LOGFILEevents,'\tNA'); % Response
+    fprintf(LOGFILEevents,'\tNaN'); % SoundID
+    fprintf(LOGFILEevents,'\tNaN'); % AnimationID
+    fprintf(LOGFILEevents,'\tNaN'); % MovDir
+    fprintf(LOGFILEevents,'\tNaN'); % Congruency
+    fprintf(LOGFILEevents,'\tNaN'); % Response
     
     % END REPORT
     
@@ -976,18 +909,18 @@ for iBlock = 1:nBlocks
         
         % 4. Write into logfile
         fprintf(LOGFILEevents,'\n%d', iSub);
-        fprintf(LOGFILEevents,'\t%d', iContingency);
+        fprintf(LOGFILEevents,'\t%d', iContingency-1);
         fprintf(LOGFILEevents,'\t%d', iBlock); % iBlock
         fprintf(LOGFILEevents,'\t%d', iTest); % Trial number
         fprintf(LOGFILEevents,'\t%d', condition); % Condition: actively or passively learned?
         fprintf(LOGFILEevents,'\t%d', TrialType); % TrialType: 1 = acquisition, 2 = test
         fprintf(LOGFILEevents,'\t%d', 1); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
         fprintf(LOGFILEevents,'\t%d', testTrialStart-TrainingStart); % event time
-        fprintf(LOGFILEevents,'\tNA'); % SoundID
-        fprintf(LOGFILEevents,'\tNA'); % AnimationID
-        fprintf(LOGFILEevents,'\tNA'); % MovDir
-        fprintf(LOGFILEevents,'\tNA'); % Congruency
-        fprintf(LOGFILEevents,'\tNA'); % Response
+        fprintf(LOGFILEevents,'\tNaN'); % SoundID
+        fprintf(LOGFILEevents,'\tNaN'); % AnimationID
+        fprintf(LOGFILEevents,'\tNaN'); % MovDir
+        fprintf(LOGFILEevents,'\tNaN'); % Congruency
+        fprintf(LOGFILEevents,'\tNaN'); % Response
         
         % END REPORT
         
@@ -1702,7 +1635,7 @@ for iBlock = 1:nBlocks
         
         % Trigger consists of congruency (1 or 2), active/passive
         % (1 or 2) and block (1-6)
-        testSoundTrigger = str2double(sprintf('%d%d%d', congruencyCode, contingencies(iContingency), iBlock));
+        testSoundTrigger = str2double(sprintf('%d%d%d', congruencyCode, 0, iBlock));
         
         % 2. Send porttalk trigger
         if port_exist == 1
@@ -1717,7 +1650,7 @@ for iBlock = 1:nBlocks
         
         % 4. Write into logfile
         fprintf(LOGFILEevents,'\n%d', iSub);
-        fprintf(LOGFILEevents,'\t%d', iContingency);
+        fprintf(LOGFILEevents,'\t%d', iContingency-1);
         fprintf(LOGFILEevents,'\t%d', iBlock);
         fprintf(LOGFILEevents,'\t%d', iTest); % Trial number
         fprintf(LOGFILEevents, '\t%d', condition); % Condition: actively or passively learned?
@@ -1728,7 +1661,7 @@ for iBlock = 1:nBlocks
         fprintf(LOGFILEevents, '\t%d', animationID);
         fprintf(LOGFILEevents, '\t%d', testtrials(1,iTest)); % MovDir
         fprintf(LOGFILEevents, '\t%d', testtrials(3,iTest)); % Congruency
-        fprintf(LOGFILEevents, '\tNA'); % Response (does not apply here)
+        fprintf(LOGFILEevents, '\tNaN'); % Response (does not apply here)
         
         % END REPORT
         
@@ -1762,25 +1695,28 @@ for iBlock = 1:nBlocks
         
         % 4. Write into logfile
         fprintf(LOGFILEevents,'\n%d', iSub);
-        fprintf(LOGFILEevents,'\t%d', iContingency);
+        fprintf(LOGFILEevents,'\t%d', iContingency-1);
         fprintf(LOGFILEevents,'\t%d', iBlock);
         fprintf(LOGFILEevents,'\t%d', iTest); % Trial number
         fprintf(LOGFILEevents, '\t%d', condition); % Condition: actively or passively learned?
         fprintf(LOGFILEevents,'\t%d', TrialType);
         fprintf(LOGFILEevents,'\t%d', 1); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
         fprintf(LOGFILEevents, '\t%d', questionTime-TrainingStart); % event time
-        fprintf(LOGFILEevents, '\tNA'); % SoundID does not apply
-        fprintf(LOGFILEevents, '\tNA'); % AnimationID does not apply
-        fprintf(LOGFILEevents, '\tNA'); % MovDir does not apply
-        fprintf(LOGFILEevents, '\tNA'); % Congruency does not apply
-        fprintf(LOGFILEevents, '\tNA'); % Response (does not apply here)
+        fprintf(LOGFILEevents, '\tNaN'); % SoundID does not apply
+        fprintf(LOGFILEevents, '\tNaN'); % AnimationID does not apply
+        fprintf(LOGFILEevents, '\tNaN'); % MovDir does not apply
+        fprintf(LOGFILEevents, '\tNaN'); % Congruency does not apply
+        fprintf(LOGFILEevents, '\tNaN'); % Response (does not apply here)
         
         % END REPORT
         
         response = -1; % We need this variable to hold something in case people don't press a button
-        % Clear any accidental presses before the instruction appeared
-        [key,time,messages,Ts] = getmidiresp(); %
-        key = [];
+        
+        if nano_exist == 1
+            % Clear any accidental presses before the instruction appeared
+            [key,~,~,~] = getmidiresp(); %
+            key = [];
+        end
         
         while (GetSecs-questionTime) <= MaxResp % Maximum response time
             if nano_exist == 0
@@ -1800,12 +1736,12 @@ for iBlock = 1:nBlocks
                 end
             elseif nano_exist == 1
                 % Clear any accidental presses before the instruction appeared
-                [key,time,messages,Ts] = getmidiresp(); %
+                [key,~,~,~] = getmidiresp(); %
                 key = [];
                 % Check for key presses
                 while isempty(key) && (GetSecs-questionTime) <= MaxResp
                     WaitSecs(0.005);
-                    [key,time,messages,Ts] = getmidiresp();
+                    [key,~,~,~] = getmidiresp();
                 end
                 if ~isempty(key) % if a response key is pressed
                     if key == nanoYES
@@ -1850,7 +1786,7 @@ for iBlock = 1:nBlocks
         
         % 4. Write into logfile
         fprintf(LOGFILEevents,'\n%d', iSub);
-        fprintf(LOGFILEevents,'\t%d', iContingency);
+        fprintf(LOGFILEevents,'\t%d', iContingency-1);
         fprintf(LOGFILEevents,'\t%d', iBlock);
         fprintf(LOGFILEevents,'\t%d', iTest); % Trial number
         fprintf(LOGFILEevents,'\t%d', condition); % Condition: actively or passively learned?

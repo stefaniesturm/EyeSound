@@ -1,5 +1,6 @@
-function EyeSound_report_event(iSub, iContingency, soundID, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents)
+function report_event(iSub, iContingency, soundID, iBlock, condition, TrialType, ExperimentStartTime, dummymode, port_exist, LOGFILEevents, training)
 disp('Sound was played');
+load EyeSound_data
 % Counterbalance order of active and passive conditions
 if EyeSound_data(iSub).Counterbalancing == 1 % Active first
     % contingencies = [1 2 1 2 1 2 1 2 1 2 1 2 1 2]; % 1 is active and 2 is passive
@@ -10,7 +11,6 @@ elseif EyeSound_data(iSub).Counterbalancing == 2 % Passive first
 end
 % soundID = moveDirection; % Information for logfiles
 acquisitionSound = GetSecs; % Information for logfiles
-soundPlayed = soundID; % We need this for the coordinates logfile (I think)
 
 % REPORT EVENT: SOUND %
 % 1. Create trigger
@@ -25,19 +25,22 @@ if dummymode == 0
     Eyelink('Message', 'TRIGGER %03d', AcquisitionSoundTrigger);
 end
 disp('Writing into logfile');
+if training == 1
+    iContingency = iContingency-1;
+end 
 % 4. Write into logfile
 fprintf(LOGFILEevents,'\n%d', iSub);
 fprintf(LOGFILEevents,'\t%d', iContingency);
 fprintf(LOGFILEevents,'\t%d', iBlock); % iBlock
-fprintf(LOGFILEevents,'\tNA'); % Trial number
+fprintf(LOGFILEevents,'\tNaN'); % Trial number
 fprintf(LOGFILEevents,'\t%d', condition); % Condition: actively or passively learned?
 fprintf(LOGFILEevents,'\t%d', TrialType); % TrialType: 1 = acquisition, 2 = test
 fprintf(LOGFILEevents,'\t%d', 2); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
 fprintf(LOGFILEevents,'\t%d', acquisitionSound-ExperimentStartTime); % event time
 fprintf(LOGFILEevents,'\t%d', soundID); % SoundID
-fprintf(LOGFILEevents,'\tNA'); % AnimationID
-fprintf(LOGFILEevents,'\tNA'); % MovDir
-fprintf(LOGFILEevents,'\tNA'); % Congruency
-fprintf(LOGFILEevents,'\tNA'); % Response
+fprintf(LOGFILEevents,'\tNaN'); % AnimationID
+fprintf(LOGFILEevents,'\tNaN'); % MovDir
+fprintf(LOGFILEevents,'\tNaN'); % Congruency
+fprintf(LOGFILEevents,'\tNaN'); % Response
 % END REPORT
 end
