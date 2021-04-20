@@ -1,4 +1,4 @@
-function report_event(iSub, iContingency, soundID, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents)
+function EyeSound_report_event(iSub, iContingency, soundID, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents)
 disp('Sound was played');
 % Counterbalance order of active and passive conditions
 if EyeSound_data(iSub).Counterbalancing == 1 % Active first

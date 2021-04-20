@@ -1,4 +1,4 @@
-function EyeSound_run2(iSub, iContingency)
+function EyeSound_run(iSub, iContingency)
 
 % iSub is subject number, StartContingency is for restarting at an advanced level
 % if something fails; if you start from the beginning, make that 1
@@ -892,56 +892,56 @@ for iBlock = 1:nBlocks
                     stop(t2) % Interrupt timer if it is already running
                     PsychPortAudio('FillBuffer', paHandle, tone{1});
                     start(t) % Start new timer for current sound
-                    t2.TimerFcn = @(soundTimer, playSound)report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents);
+                    t2.TimerFcn = @(soundTimer, playSound)EyeSound_report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents);
                     start(t2) % This timer writes into logfile
                 case 2
                     stop(t)
                     stop(t2)
                     PsychPortAudio('FillBuffer', paHandle, tone{2});
                     start(t) % Start new timer for current sound
-                    t2.TimerFcn = @(soundTimer, playSound)report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents);
+                    t2.TimerFcn = @(soundTimer, playSound)EyeSound_report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents);
                     start(t2)
                 case 3
                     stop(t)
                     stop(t2)
                     PsychPortAudio('FillBuffer', paHandle, tone{3});
                     start(t) % Start new timer for current sound
-                    t2.TimerFcn = @(soundTimer, playSound)report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents);
+                    t2.TimerFcn = @(soundTimer, playSound)EyeSound_report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents);
                     start(t2)
                 case 4
                     stop(t)
                     stop(t2)
                     PsychPortAudio('FillBuffer', paHandle, tone{4});
                     start(t) % Start new timer for current sound
-                    t2.TimerFcn = @(soundTimer, playSound)report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents);
+                    t2.TimerFcn = @(soundTimer, playSound)EyeSound_report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents);
                     start(t2)
                 case 5
                     stop(t)
                     stop(t2)
                     PsychPortAudio('FillBuffer', paHandle, tone{5});
                     start(t) % Start new timer for current sound
-                    t2.TimerFcn = @(soundTimer, playSound)report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents);
+                    t2.TimerFcn = @(soundTimer, playSound)EyeSound_report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents);
                     start(t2)
                 case 6
                     stop(t)
                     stop(t2)
                     PsychPortAudio('FillBuffer', paHandle, tone{6});
                     start(t) % Start new timer for current sound
-                    t2.TimerFcn = @(soundTimer, playSound)report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents);
+                    t2.TimerFcn = @(soundTimer, playSound)EyeSound_report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents);
                     start(t2)
                 case 7
                     stop(t)
                     stop(t2)
                     PsychPortAudio('FillBuffer', paHandle, tone{7});
                     start(t) % Start new timer for current sound
-                    t2.TimerFcn = @(soundTimer, playSound)report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents);
+                    t2.TimerFcn = @(soundTimer, playSound)EyeSound_report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents);
                     start(t2)
                 case 8
                     stop(t)
                     stop(t2)
                     PsychPortAudio('FillBuffer', paHandle, tone{8});
                     start(t) % Start new timer for current sound
-                    t2.TimerFcn = @(soundTimer, playSound)report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents);
+                    t2.TimerFcn = @(soundTimer, playSound)EyeSound_report_event(iSub, iContingency, moveDirection, iBlock, condition, TrialType, ExperimentStartTime, EyeSound_data, dummymode, port_exist, LOGFILEevents);
                     start(t2)
             end
 %             if soundWasPlayed == 1 % Do the following every time a sound was actually played
