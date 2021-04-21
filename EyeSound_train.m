@@ -38,8 +38,8 @@ end
 % Load matrix with info on stimuli
 load('EyeSound_data.mat'); % Load the matrix that contains info about stimuli
 
-nTests = 1;
-nBlocks = 1; % Should be 7
+nTests = 3;
+nBlocks = 7; % Should be 7
 MaxResp = 2.5; % Maximum response time for questions in s
 AcquisitionDur = 20; % 20sec for acquisition trials, less for debugging
 ttCounter = 0; % This counter counts the blocks in a continuous way instead of restarting from 1 every time we change the level. This is important because to index the test trial matrix, we need this number
@@ -57,7 +57,7 @@ screenNumber=max(Screen('Screens'));
 white = [1 1 1];
 black = [0 0 0];
 red = [1 0 0];
-window_size = [0 0 400 400]; % small window for debugging; comment out if fullscreen is wanted
+% window_size = [0 0 400 400]; % small window for debugging; comment out if fullscreen is wanted
 
 % Open an on screen window and color it black
 % try
@@ -223,13 +223,13 @@ if dummymode == 0
     el.calibrationtargetcolour = red;
     el.targetbeep = 0;
     el.feedbackbeep = 0;
-   
+    
     % you must call this function to apply the changes from above
     EyelinkUpdateDefaults(el);
     
     % Calibrate the eye tracker
     EyelinkDoTrackerSetup(el);
-        
+    
     % Title message to EDF file
     Eyelink('command', 'add_file_preamble_text ''Eye-tracker data from EyeSound training.''');
     
@@ -394,13 +394,13 @@ for iBlock = 1:nBlocks
     % Test trial codes change per block
     testtrials = EyeSound_data(iSub).Blocks(ttCounter).TestTrials;
     disp('blocks started');
-
+    
     if dummymode == 0
         % do a check of calibration using driftcorrection
         EyelinkDoDriftCorrection(el);
     end
     ContingencyStartTime = GetSecs;
-
+    
     % Send trigger for new block, with info on trial type (acquisition,
     % 0), level type (1 or 2) and block number
     newBlockTrigger = str2double(['0', sprintf('1%d', iBlock)]);
@@ -429,7 +429,7 @@ for iBlock = 1:nBlocks
     end
     
     
-        [~ , ExploreCue,~,~] = Screen('Flip',window,0);
+    [~ , ExploreCue,~,~] = Screen('Flip',window,0);
     
     Screen('Flip',window, (ExploreCue+0.5));
     AcquisitionStartTime = GetSecs;
@@ -475,46 +475,46 @@ for iBlock = 1:nBlocks
     AcquisitionStartTime = GetSecs;
     conditional = 1; % Set conditional for acquisition start to TRUE
     % TRY THIS: Start recording eye position now, after the final drift
-        % correction
-        if dummymode == 0
-            Eyelink('Message', 'New level: %d.', iContingency-1);
-            Eyelink('Message', 'TRIGGER %03d', ContingencyStartTrigger);
-            % The message below will be shown on the host PC
-            Eyelink('command', 'record_status_message "TRAINING %d/%d"', iContingency-1, length(contingencies));
-            % Before recording, we place reference graphics on the host display
-            % Must be offline to draw to EyeLink screen
-            Eyelink('Command', 'set_idle_mode');
-            
-            % clear tracker display and draw box at center
-            Eyelink('Command', 'clear_screen 0')
-            Eyelink('command', 'draw_box %d %d %d %d 15', screenXpixels/2-50, screenYpixels/2-50, screenXpixels/2+50, screenYpixels/2+50);
-            
-            % start recording eye position (preceded by a short pause so that
-            % the tracker can finish the mode transition)
-            % The paramerters for the 'StartRecording' call controls the
-            % file_samples, file_events, link_samples, link_events availability
-            Eyelink('Command', 'set_idle_mode');
-            WaitSecs(0.05);
-            Eyelink('StartRecording');
-            eye_used = Eyelink('EyeAvailable'); % get eye that's tracked
-            % returns 0 (LEFT_EYE), 1 (RIGHT_EYE) or 2 (BINOCULAR) depending on what data is
-            if eye_used == 2
-                eye_used = 0; % use the left_eye data
-            end
-            % record a few samples before we actually start displaying
-            % otherwise you may lose a few msec of data
-            WaitSecs(0.1);
-            
-        end
+    % correction
+    if dummymode == 0
+        Eyelink('Message', 'New level: %d.', iContingency-1);
+        Eyelink('Message', 'TRIGGER %03d', ContingencyStartTrigger);
+        % The message below will be shown on the host PC
+        Eyelink('command', 'record_status_message "TRAINING %d/%d"', iContingency-1, length(contingencies));
+        % Before recording, we place reference graphics on the host display
+        % Must be offline to draw to EyeLink screen
+        Eyelink('Command', 'set_idle_mode');
         
-        % Prepare the timer that plays sound with delay of 1 sec
-        soundTimer = timer;
-        soundTimer.StartDelay = 1;
-        soundTimer.TimerFcn = @(x, y)eval(PsychPortAudio('Start', paHandle, 1));
-        reportTimer = timer;
-        reportTimer.StartDelay = 1;
+        % clear tracker display and draw box at center
+        Eyelink('Command', 'clear_screen 0')
+        Eyelink('command', 'draw_box %d %d %d %d 15', screenXpixels/2-50, screenYpixels/2-50, screenXpixels/2+50, screenYpixels/2+50);
+        
+        % start recording eye position (preceded by a short pause so that
+        % the tracker can finish the mode transition)
+        % The paramerters for the 'StartRecording' call controls the
+        % file_samples, file_events, link_samples, link_events availability
+        Eyelink('Command', 'set_idle_mode');
+        WaitSecs(0.05);
+        Eyelink('StartRecording');
+        eye_used = Eyelink('EyeAvailable'); % get eye that's tracked
+        % returns 0 (LEFT_EYE), 1 (RIGHT_EYE) or 2 (BINOCULAR) depending on what data is
+        if eye_used == 2
+            eye_used = 0; % use the left_eye data
+        end
+        % record a few samples before we actually start displaying
+        % otherwise you may lose a few msec of data
+        WaitSecs(0.1);
+        
+    end
     
-    while conditional == 1 % start while loop for acquisition trials        
+    % Prepare the timer that plays sound with delay of 1 sec
+    soundTimer = timer;
+    soundTimer.StartDelay = 1;
+    soundTimer.TimerFcn = @(x, y)eval(PsychPortAudio('Start', paHandle, 1));
+    reportTimer = timer;
+    reportTimer.StartDelay = 1;
+    
+    while conditional == 1 % start while loop for acquisition trials
         conditional = (GetSecs-AcquisitionStartTime < AcquisitionDur); % Active trials end when the time is up
         if dummymode == 0
             error=Eyelink('CheckRecording');
@@ -735,26 +735,24 @@ for iBlock = 1:nBlocks
             lastStop = 9;
         end
         
-        stationary = isequal(currentMouse, [xMouse yMouse]);
+        % Record all movements into coordinates logfile
+        fprintf(LOGFILEexplore,'\n%d', iSub);
+        fprintf(LOGFILEexplore,'\t%d', iContingency-1); % Make the contingency "0" in the logfiles to represent training
+        fprintf(LOGFILEexplore,'\t%d', iBlock);
+        fprintf(LOGFILEexplore,'\t%d', condition);
+        fprintf(LOGFILEexplore,'\t%d', GetSecs-AcquisitionStartTime);
+        fprintf(LOGFILEexplore, '\t%d', xMouse);
+        fprintf(LOGFILEexplore, '\t%d', yMouse);
+        fprintf(LOGFILEexplore, '\t%d', soundPlayed);
+        currentMouse = [xMouse yMouse];
+        soundPlayed = 0;
         
-        if stationary == 0
-            fprintf(LOGFILEexplore,'\n%d', iSub);
-            fprintf(LOGFILEexplore,'\t%d', iContingency-1); % Make the contingency "0" in the logfiles to represent training
-            fprintf(LOGFILEexplore,'\t%d', iBlock);
-            fprintf(LOGFILEexplore,'\t%d', condition);
-            fprintf(LOGFILEexplore,'\t%d', GetSecs-AcquisitionStartTime);
-            fprintf(LOGFILEexplore, '\t%d', xMouse);
-            fprintf(LOGFILEexplore, '\t%d', yMouse);
-            fprintf(LOGFILEexplore, '\t%d', soundPlayed);
-            currentMouse = [xMouse yMouse];
-            soundPlayed = 0;
-        end
         if contingencies(iContingency) == 2 % Animate
             vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
         else
             Screen('Flip', window); % Use mouse coordinates
         end
-
+        
         
         if lastStop ~= previousStop
             previousStop = lastStop;
@@ -1619,6 +1617,7 @@ for iBlock = 1:nBlocks
         end % if-statement for movement moveDirectionections
         
         % Present test sound
+        WaitSecs(1);
         testSoundTime = GetSecs;
         PsychPortAudio('Start', paHandle, 1);
         
@@ -1666,13 +1665,13 @@ for iBlock = 1:nBlocks
         % END REPORT
         
         % --- Question & response ---
-            Screen('TextSize', window, 40);
-            if EyeSound_data(iSub).Counterbalancing == 1 % Left is no
-                DrawFormattedText(window, 'NO     ?     YES', 'center', 'center', white);
-            elseif EyeSound_data(iSub).Counterbalancing == 2 % Left is yes
-                DrawFormattedText(window, 'YES    ?      NO', 'center', 'center', white);
-            end
-
+        Screen('TextSize', window, 60);
+        if EyeSound_data(iSub).Counterbalancing == 1 % Left is no
+            DrawFormattedText(window, 'NO     ?     YES', 'center', 'center', white);
+        elseif EyeSound_data(iSub).Counterbalancing == 2 % Left is yes
+            DrawFormattedText(window, 'YES    ?      NO', 'center', 'center', white);
+        end
+        
         questionTime = GetSecs;
         Screen('Flip',window,(testSoundTime+1)); % I made this 2 seconds because 1 second felt super fast
         
@@ -1771,17 +1770,19 @@ for iBlock = 1:nBlocks
         
         % 1. Create trigger
         
-        ReponseTrigger = 246;
+        ResponseTrigger = 246;
         
-        % 2. Send porttalk trigger
-        if port_exist == 1
-            porttalk(hex2dec('CFB8'), ReponseTrigger, 1000);
-        end
-        
-        % 3. Send Eyelink message
-        if dummymode == 0
-            Eyelink('Message', 'Participant made a response.');
-            Eyelink('Message', 'TRIGGER %03d', ReponseTrigger);
+        if ~isnan(response) % Send these triggers only if a response was made
+            % 2. Send porttalk trigger
+            if port_exist == 1
+                porttalk(hex2dec('CFB8'), ResponseTrigger, 1000);
+            end
+            
+            % 3. Send Eyelink message
+            if dummymode == 0
+                Eyelink('Message', 'Participant made a response.');
+                Eyelink('Message', 'TRIGGER %03d', ResponseTrigger);
+            end
         end
         
         % 4. Write into logfile

@@ -50,7 +50,7 @@ end
 nTests = 1; % should be 6
 nBlocks = 1; % should be 7
 MaxResp = 2.5; % Maximum response time for questions in s
-AcquisitionDur = 10; % 20sec for acquisition trials, less for debugging
+AcquisitionDur = 20; % 20sec for acquisition trials, less for debugging
 ttCounter = 7; % If we did one level of training, that should be 7 (blocks)
 % If we did two contingencies of training, it would be 14, etc.
 columnX = []; % initialise this variable so it exists
@@ -70,14 +70,14 @@ screenNumber=max(Screen('Screens'));
 white = [1 1 1];
 black = [0 0 0];
 red = [1 0 0];
-window_size = [0 0 400 400]; % small window for debugging; comment out if fullscreen is wanted
+% window_size = [0 0 400 400]; % small window for debugging; comment out if fullscreen is wanted
 
 % Open an on screen window and color it black
 if exist('window_size')
     [window, windowRect] = PsychImaging('OpenWindow', screenNumber, black, window_size); % Open for debugging
 else
-    HideCursor;
     [window, windowRect] = PsychImaging('OpenWindow', screenNumber, black); % Open fullscreen
+    HideCursor;
 end
 
 % Prepare the matrix
@@ -313,7 +313,7 @@ ExperimentStartTime = GetSecs;
 
 Screen('TextSize', window, 60); % set text size
 Screen('TextFont', window, 'Arial');
-DrawFormattedText(window, 'El experimentador iniciar√° el experimento.', 'center', 'center',white); % Wait for experimenter input
+DrawFormattedText(window, 'El experimentador iniciar· el experimento.', 'center', 'center',white); % Wait for experimenter input
 Screen('Flip',window);
 KbStrokeWait; % Experimenter button press
 
@@ -501,19 +501,20 @@ for iBlock = 1:nBlocks
     % Test trial codes change per block
     testtrials = EyeSound_data(iSub).Blocks(ttCounter).TestTrials;
     
-    % Send trigger for new block, with info on trial type (acquisition,
-    % 0), level type (1 or 2) and block number
-    newBlockTrigger = str2double(['0', sprintf('1%d', iBlock)]);
+    % Send trigger for new block
+    newBlockTrigger = 252;
     
-    % 2. Send porttalk trigger
-    if port_exist == 1
-        porttalk(hex2dec('CFB8'), newBlockTrigger, 1000);
-    end
-    
-    % 3. Send Eyelink message
-    if dummymode == 0
-        Eyelink('Message', 'New block.');
-        Eyelink('Message', 'TRIGGER %03d', newBlockTrigger);
+    if iBlock < 1 % In all but the first block of a contingency
+        % 2. Send porttalk trigger
+        if port_exist == 1
+            porttalk(hex2dec('CFB8'), newBlockTrigger, 1000);
+        end
+        
+        % 3. Send Eyelink message
+        if dummymode == 0
+            Eyelink('Message', 'New block.');
+            Eyelink('Message', 'TRIGGER %03d', newBlockTrigger);
+        end
     end
     
     % ACQUISITRION TRIAL (can be passive or active)
@@ -584,7 +585,7 @@ for iBlock = 1:nBlocks
     end
     
     % TRY START RECORDING HERE
-    if dummymode == 0
+    if dummymode == 0 && contingencies(iContingency) == 1
         Eyelink('Message', 'New level: %d.', iContingency);
         Eyelink('Message', 'TRIGGER %03d', ContingencyStartTrigger);
         % The message below will be shown on the host PC
@@ -637,7 +638,7 @@ for iBlock = 1:nBlocks
             conditional = (GetSecs-AcquisitionStartTime < AcquisitionDur); % Active trials end when the time is up
         end
         
-        if dummymode == 0
+        if dummymode == 0 && contingencies(iContingency) == 1
             error=Eyelink('CheckRecording');
             if(error~=0)
                 break;
@@ -658,8 +659,8 @@ for iBlock = 1:nBlocks
                 if Eyelink( 'NewFloatSampleAvailable') > 0
                     % get the sample in the form of an event structure
                     evt = Eyelink( 'NewestFloatSample');
-                    evt.gx
-                    evt.gy
+                    evt.gx;
+                    evt.gy;
                     if eye_used ~= -1 % do we know which eye to use yet?
                         % if we do, get current gaze position from sample
                         x = evt.gx(eye_used+1); % +1 as we're accessing MATLAB array
@@ -856,20 +857,17 @@ for iBlock = 1:nBlocks
             lastStop = 9;
         end
         
-        stationary = isequal(currentMouse, [xMouse yMouse]);
-        
-        if stationary == 0
-            fprintf(LOGFILEexplore,'\n%d', iSub);
-            fprintf(LOGFILEexplore,'\t%d', iContingency);
-            fprintf(LOGFILEexplore,'\t%d', iBlock);
-            fprintf(LOGFILEexplore,'\t%d', condition);
-            fprintf(LOGFILEexplore,'\t%d', GetSecs-AcquisitionStartTime);
-            fprintf(LOGFILEexplore, '\t%d', xMouse);
-            fprintf(LOGFILEexplore, '\t%d', yMouse);
-            fprintf(LOGFILEexplore, '\t%d', soundPlayed);
-            currentMouse = [xMouse yMouse];
-            soundPlayed = 0;
-        end
+        % Record all movements into coordinates logfile
+        fprintf(LOGFILEexplore,'\n%d', iSub);
+        fprintf(LOGFILEexplore,'\t%d', iContingency);
+        fprintf(LOGFILEexplore,'\t%d', iBlock);
+        fprintf(LOGFILEexplore,'\t%d', condition);
+        fprintf(LOGFILEexplore,'\t%d', GetSecs-AcquisitionStartTime);
+        fprintf(LOGFILEexplore, '\t%d', xMouse);
+        fprintf(LOGFILEexplore, '\t%d', yMouse);
+        fprintf(LOGFILEexplore, '\t%d', soundPlayed);
+        currentMouse = [xMouse yMouse];
+        soundPlayed = 0;
         
         if contingencies(iContingency) == 2 % Animate
             vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
@@ -942,977 +940,979 @@ for iBlock = 1:nBlocks
     end % While loop for acquisition trials
     stop(soundTimer);
     stop(reportTimer); % Stop timer in case it was still running so that no more sounds are played
-end % Blocks
-
-endExplore = GetSecs;
-
-% REPORT EVENT: CUE %
-% 1. Create trigger
-EndAcquisition = 251;
-% 2. Send porttalk trigger
-if port_exist == 1
-    porttalk(hex2dec('CFB8'), EndAcquisition, 1000);
-end
-% 3. Send Eyelink message
-if dummymode == 0
-    Eyelink('Message', 'Acquisition trial ended.');
-    Eyelink('Message', 'TRIGGER %03d', EndAcquisition);
-end
-% 4. Write into logfile
-fprintf(LOGFILEevents,'\n%d', iSub);
-fprintf(LOGFILEevents,'\t%d', iContingency);
-fprintf(LOGFILEevents,'\t%d', iBlock); % iBlock
-fprintf(LOGFILEevents,'\tNaN'); % Trial number
-fprintf(LOGFILEevents,'\t%d', condition); % Condition: actively or passively learned?
-fprintf(LOGFILEevents,'\t%d', TrialType); % TrialType: 1 = acquisition, 2 = test
-fprintf(LOGFILEevents,'\t%d', 1); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
-fprintf(LOGFILEevents,'\t%d', endExplore-ExperimentStartTime); % event time
-fprintf(LOGFILEevents,'\tNaN'); % SoundID
-fprintf(LOGFILEevents,'\tNaN'); % AnimationID
-fprintf(LOGFILEevents,'\tNaN'); % MovDir
-fprintf(LOGFILEevents,'\tNaN'); % Congruency
-fprintf(LOGFILEevents,'\tNaN'); % Response
-% END REPORT
-
-% End exploring
-Screen('TextSize', window, 60);
-DrawFormattedText(window, '¬°Se acab√≥ el tiempo!', 'center', 'center',white);
-Screen('Flip',window);
-Screen('Flip',window, (endExplore+0.5)); % 0.5s after "Se acab√≥ el tiempo"
-previousStop = -1; % Second to last stop at a significant location
-lastStop = -1; % Last stop at a significant location
-moveDirection = -1; % Last significant movement between two stops
-
-%%
-
-% Test trials (always the same, but only 3 during training block)
-for iTest = 1:nTests % Only 3 for training, otherwise 6
-    TrialType = 2; % test trial (for logfiles)
-    testsound = tone{testtrials(2,iTest)};
-    PsychPortAudio('FillBuffer', paHandle, testsound);
-    Screen('TextSize', window, 60);
-    DrawFormattedText(window, 'TEST', 'center', 'center',white);
-    testTrialStart = GetSecs;
-    Screen('Flip',window);
     
-    if iTest == 1
-        % REPORT EVENT: TEST TRIALS BEGIN %
+    endExplore = GetSecs;
+    
+    % REPORT EVENT: CUE %
+    % 1. Create trigger
+    EndAcquisition = 251;
+    % 2. Send porttalk trigger
+    if port_exist == 1
+        porttalk(hex2dec('CFB8'), EndAcquisition, 1000);
+    end
+    % 3. Send Eyelink message
+    if dummymode == 0
+        Eyelink('Message', 'Acquisition trial ended.');
+        Eyelink('Message', 'TRIGGER %03d', EndAcquisition);
+    end
+    % 4. Write into logfile
+    fprintf(LOGFILEevents,'\n%d', iSub);
+    fprintf(LOGFILEevents,'\t%d', iContingency);
+    fprintf(LOGFILEevents,'\t%d', iBlock); % iBlock
+    fprintf(LOGFILEevents,'\tNaN'); % Trial number
+    fprintf(LOGFILEevents,'\t%d', condition); % Condition: actively or passively learned?
+    fprintf(LOGFILEevents,'\t%d', TrialType); % TrialType: 1 = acquisition, 2 = test
+    fprintf(LOGFILEevents,'\t%d', 1); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
+    fprintf(LOGFILEevents,'\t%d', endExplore-ExperimentStartTime); % event time
+    fprintf(LOGFILEevents,'\tNaN'); % SoundID
+    fprintf(LOGFILEevents,'\tNaN'); % AnimationID
+    fprintf(LOGFILEevents,'\tNaN'); % MovDir
+    fprintf(LOGFILEevents,'\tNaN'); % Congruency
+    fprintf(LOGFILEevents,'\tNaN'); % Response
+    % END REPORT
+    
+    % End exploring
+    Screen('TextSize', window, 60);
+    DrawFormattedText(window, 'Se acabÛ el tiempo!', 'center', 'center',white);
+    Screen('Flip',window);
+    Screen('Flip',window, (endExplore+0.5)); % 0.5s after "Se acab√≥ el tiempo"
+    previousStop = -1; % Second to last stop at a significant location
+    lastStop = -1; % Last stop at a significant location
+    moveDirection = -1; % Last significant movement between two stops
+    
+    %%
+    
+    % Test trials (always the same, but only 3 during training block)
+    for iTest = 1:nTests % Only 3 for training, otherwise 6
+        TrialType = 2; % test trial (for logfiles)
+        testsound = tone{testtrials(2,iTest)};
+        PsychPortAudio('FillBuffer', paHandle, testsound);
+        Screen('TextSize', window, 60);
+        DrawFormattedText(window, 'TEST', 'center', 'center',white);
+        testTrialStart = GetSecs;
+        Screen('Flip',window);
+        
+        if iTest == 1
+            % REPORT EVENT: TEST TRIALS BEGIN %
+            
+            % 1. Create trigger
+            
+            TestTrialStartTrigger = 248;
+            
+            % 2. Send porttalk trigger
+            if port_exist == 1
+                porttalk(hex2dec('CFB8'), TestTrialStartTrigger, 1000);
+            end
+            
+            % 3. Send Eyelink message
+            if dummymode == 0
+                Eyelink('Message', 'Test trial started.');
+                Eyelink('Message', 'TRIGGER %03d', TestTrialStartTrigger);
+            end
+            
+            % 4. Write into logfile
+            fprintf(LOGFILEevents,'\n%d', iSub);
+            fprintf(LOGFILEevents,'\t%d', iContingency);
+            fprintf(LOGFILEevents,'\t%d', iBlock); % iBlock
+            fprintf(LOGFILEevents,'\tNaN'); % Trial number
+            fprintf(LOGFILEevents,'\t%d', condition); % Condition: actively or passively learned?
+            fprintf(LOGFILEevents,'\t%d', TrialType); % TrialType: 1 = acquisition, 2 = test
+            fprintf(LOGFILEevents,'\t%d', 1); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
+            fprintf(LOGFILEevents,'\t%d', testTrialStart-ExperimentStartTime); % event time
+            fprintf(LOGFILEevents,'\tNaN'); % SoundID
+            fprintf(LOGFILEevents,'\tNaN'); % AnimationID
+            fprintf(LOGFILEevents,'\tNaN'); % MovDir
+            fprintf(LOGFILEevents,'\tNaN'); % Congruency
+            fprintf(LOGFILEevents,'\tNaN'); % Response
+            
+            % END REPORT
+        end
+        
+        Screen('Flip',window, (testTrialStart+0.5));
+        
+        if testtrials(1,iTest) == 1 % If the moveDirectionection of movement is 1
+            animation = randi(6); % There are 6 different animations that have moveDirectionection 1
+            switch animation
+                case 1
+                    % Animation 2-1, moveDirection: 1
+                    animationID = 4;
+                    xDot = pos2(1);
+                    yDot = pos2(2);
+                    while xDot > pos1(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        % xDot = xDot - speed;
+                        xDot = xDot-speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 2
+                    % Animation 3-2, moveDirection: 1
+                    animationID = 9;
+                    xDot = pos3(1);
+                    yDot = pos3(2);
+                    while xDot > pos2(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        xDot = xDot - speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 3
+                    % Animation 5-4, moveDirection: 1
+                    animationID = 20;
+                    xDot = pos5(1);
+                    yDot = pos5(2);
+                    while xDot > pos4(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        xDot = xDot - speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 4
+                    % Animation 6-5, moveDirection: 1
+                    animationID = 27;
+                    xDot = pos6(1);
+                    yDot = pos6(2);
+                    while xDot > pos5(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        xDot = xDot - speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 5
+                    % Animation 8-7, moveDirection: 1
+                    animationID = 36;
+                    xDot = pos8(1);
+                    yDot = pos8(2);
+                    while xDot > pos7(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        xDot = xDot - speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 6
+                    % Animation 9-8, moveDirection: 1
+                    animationID = 40;
+                    xDot = pos9(1);
+                    yDot = pos9(2);
+                    while xDot > pos8(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        xDot = xDot - speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+            end
+        elseif testtrials(1,iTest) == 2 % If the moveDirectionection of movement is 2
+            animation = randi(6); % There are 6 different animations that have moveDirectionection 2
+            switch animation
+                case 1
+                    % Animation 1-2, moveDirection: 2
+                    animationID = 1;
+                    xDot = pos1(1);
+                    yDot = pos1(2);
+                    while xDot < pos2(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        xDot = xDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 2
+                    % Animation 2-3, moveDirection: 2
+                    animationID = 5;
+                    xDot = pos2(1);
+                    yDot = pos2(2);
+                    while xDot < pos3(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        xDot = xDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 3
+                    % Animation 4-5, moveDirection: 2
+                    animationID = 14;
+                    xDot = pos4(1);
+                    yDot = pos4(2);
+                    while xDot < pos5(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        xDot = xDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 4
+                    % Animation 5-6, moveDirection: 2
+                    animationID = 21;
+                    xDot = pos5(1);
+                    yDot = pos5(2);
+                    while xDot < pos6(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        xDot = xDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 5
+                    % Animation 7-8, moveDirection: 2
+                    animationID = 32;
+                    xDot = pos7(1);
+                    yDot = pos7(2);
+                    while xDot < pos8(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        xDot = xDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 6
+                    % Animation 8-9, moveDirection: 2
+                    animationID = 37;
+                    xDot = pos8(1);
+                    yDot = pos8(2);
+                    while xDot < pos9(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        xDot = xDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+            end
+        elseif testtrials(1,iTest) == 3 % If the moveDirectionection of movement is 3
+            animation = randi(6); % There are 6 different animations that have moveDirectionection 3
+            switch animation
+                case 1
+                    % Animation 4-1, moveDirection: 3
+                    animationID = 12;
+                    xDot = pos4(1);
+                    yDot = pos4(2);
+                    while yDot > pos1(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot - speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 2
+                    % Animation 5-2, moveDirection: 3
+                    animationID = 18;
+                    xDot = pos5(1);
+                    yDot = pos5(2);
+                    while yDot > pos2(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot - speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 3
+                    % Animation 6-3, moveDirection: 3
+                    animationID = 26;
+                    xDot = pos6(1);
+                    yDot = pos6(2);
+                    while yDot > pos3(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot - speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 4
+                    % Animation 7-4, moveDirection: 3
+                    animationID = 30;
+                    xDot = pos7(1);
+                    yDot = pos7(2);
+                    while yDot > pos4(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot - speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 5
+                    % Animation 8-5, moveDirection: 3
+                    animationID = 34;
+                    xDot = pos8(1);
+                    yDot = pos8(2);
+                    while yDot > pos5(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot - speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 6
+                    % Animation 9-6, moveDirection: 3
+                    animationID = 39;
+                    xDot = pos9(1);
+                    yDot = pos9(2);
+                    while yDot > pos6(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot - speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+            end % switch
+            
+        elseif testtrials(1,iTest) == 4 % If the moveDirectionection of movement is 4
+            animation = randi(6); % There are 6 different animations that have moveDirectionection 4 (last one where this is the case)
+            switch animation
+                case 1
+                    % Animation 1-4, moveDirection: 4
+                    animationID = 2;
+                    xDot = pos1(1);
+                    yDot = pos1(2);
+                    while yDot < pos4(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 2
+                    % Animation 2-5, moveDirection: 4
+                    animationID = 7;
+                    xDot = pos2(1);
+                    yDot = pos2(2);
+                    while yDot < pos5(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 3
+                    % Animation 3-6, moveDirection: 4
+                    animationID = 11;
+                    xDot = pos3(1);
+                    yDot = pos3(2);
+                    while yDot < pos6(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 4
+                    % Animation 4-7, moveDirection: 4
+                    animationID = 15;
+                    xDot = pos4(1);
+                    yDot = pos4(2);
+                    while yDot < pos7(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 5
+                    % Animation 5-8, moveDirection: 4
+                    animationID = 23;
+                    xDot = pos5(1);
+                    yDot = pos5(2);
+                    while yDot < pos8(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 6
+                    % Animation 6-9, moveDirection: 4
+                    animationID = 29;
+                    xDot = pos6(1);
+                    yDot = pos6(2);
+                    while yDot < pos9(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+            end % switch
+        elseif testtrials(1,iTest) == 5 % If the moveDirectionection of movement is 5
+            animation = randi(4); % There are 4 different animations that have moveDirectionection 5
+            switch animation
+                case 1
+                    % Animation 5-1, moveDirection: 5
+                    animationID = 17;
+                    xDot = pos5(1);
+                    yDot = pos5(2);
+                    while yDot > pos1(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot - speed;
+                        xDot = xDot - speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 2
+                    % Animation 6-2, moveDirection: 5
+                    animationID = 25;
+                    xDot = pos6(1);
+                    yDot = pos6(2);
+                    while yDot > pos2(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot - speed;
+                        xDot = xDot - speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 3
+                    % Animation 8-4, moveDirection: 5
+                    animationID = 33;
+                    xDot = pos8(1);
+                    yDot = pos8(2);
+                    while xDot > pos4(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        xDot = xDot - speed;
+                        yDot = yDot - speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 4
+                    % Animation 9-5, moveDirection: 5
+                    animationID = 38;
+                    xDot = pos9(1);
+                    yDot = pos9(2);
+                    while xDot > pos5(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        xDot = xDot - speed;
+                        yDot = yDot - speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+            end % switch
+        elseif testtrials(1,iTest) == 6 % If the moveDirectionection of movement is 6
+            animation = randi(4); % There are 4 different animations that have moveDirectionection 6
+            switch animation
+                case 1
+                    % Animation 2-4, moveDirection: 6
+                    animationID = 6;
+                    xDot = pos2(1);
+                    yDot = pos2(2);
+                    while xDot > pos4(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        xDot = xDot - speed;
+                        yDot = yDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 2
+                    % Animation 3-5, moveDirection: 6
+                    animationID = 10;
+                    xDot = pos3(1);
+                    yDot = pos3(2);
+                    while xDot > pos5(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        xDot = xDot - speed;
+                        yDot = yDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 3
+                    % Animation 5-7, moveDirection: 6
+                    animationID = 22;
+                    xDot = pos5(1);
+                    yDot = pos5(2);
+                    while yDot < pos7(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot + speed;
+                        xDot = xDot - speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 4
+                    % Animation 6-8, moveDirection: 6
+                    animationID = 28;
+                    xDot = pos6(1);
+                    yDot = pos6(2);
+                    while xDot > pos8(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        xDot = xDot - speed;
+                        yDot = yDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+            end % switch
+        elseif testtrials(1,iTest) == 7 % If the moveDirectionection of movement is 7
+            animation = randi(4); % There are 4 different animations that have moveDirectionection 7
+            switch animation
+                case 1
+                    % Animation 4-2, moveDirection: 7
+                    animationID = 13;
+                    xDot = pos4(1);
+                    yDot = pos4(2);
+                    while yDot > pos2(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot - speed;
+                        xDot = xDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 2
+                    % Animation 5-3, moveDirection: 7
+                    animationID = 19;
+                    xDot = pos5(1);
+                    yDot = pos5(2);
+                    while yDot > pos3(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot - speed;
+                        xDot = xDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 3
+                    % Animation 7-5, moveDirection: 7
+                    animationID = 31;
+                    xDot = pos7(1);
+                    yDot = pos7(2);
+                    while yDot > pos5(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot - speed;
+                        xDot = xDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 4
+                    % Animation 8-6, moveDirection: 7
+                    animationID = 35;
+                    xDot = pos8(1);
+                    yDot = pos8(2);
+                    while yDot > pos6(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot - speed;
+                        xDot = xDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+            end % switch
+        elseif testtrials(1,iTest) == 8 % If the moveDirectionection of movement is 8
+            animation = randi(4); % There are 4 different animations that have moveDirectionection 8
+            switch animation
+                case 1
+                    % Animation 1-5, moveDirection: 8
+                    animationID = 3;
+                    xDot = pos1(1);
+                    yDot = pos1(2);
+                    while yDot < pos5(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot + speed;
+                        xDot = xDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 2
+                    % Animation 2-6, moveDirection: 8
+                    animationID = 8;
+                    xDot = pos2(1);
+                    yDot = pos2(2);
+                    while xDot < pos6(1)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        xDot = xDot + speed;
+                        yDot = yDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 3
+                    % Animation 4-8, moveDirection: 8
+                    animationID = 16;
+                    xDot = pos4(1);
+                    yDot = pos4(2);
+                    while yDot < pos8(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot + speed;
+                        xDot = xDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+                case 4
+                    % Animation 5-9, moveDirection: 8
+                    animationID = 24;
+                    xDot = pos5(1);
+                    yDot = pos5(2);
+                    while yDot < pos9(2)
+                        % Draw matrix
+                        Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
+                        Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
+                        % Make dot move at "speed"
+                        yDot = yDot + speed;
+                        xDot = xDot + speed;
+                        % Draw dot
+                        animationStart = GetSecs;
+                        Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
+                        vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
+                    end
+            end % very long switch
+        end % if-statement for movement moveDirectionections
+        
+        % Present test sound
+        WaitSecs(1);
+        testSoundTime = GetSecs;
+        PsychPortAudio('Start', paHandle, 1);
+        
+        % REPORT EVENT: TEST SOUND %
         
         % 1. Create trigger
         
-        TestTrialStartTrigger = 248;
+        % Prepare trigger code for test sounds
+        if testtrials(3,iTest) == 0
+            congruencyCode = 2;
+        elseif testtrials(3,iTest) == 1
+            congruencyCode = 1;
+        end
+        
+        % Trigger consists of congruency (1 or 2), active/passive
+        % (1 or 2) and block (1-6)
+        testSoundTrigger = str2double(sprintf('%d%d%d', congruencyCode, contingencies(iContingency), iBlock));
         
         % 2. Send porttalk trigger
         if port_exist == 1
-            porttalk(hex2dec('CFB8'), TestTrialStartTrigger, 1000);
+            porttalk(hex2dec('CFB8'), testSoundTrigger, 1000);
         end
         
         % 3. Send Eyelink message
         if dummymode == 0
-            Eyelink('Message', 'Test trial started.');
-            Eyelink('Message', 'TRIGGER %03d', TestTrialStartTrigger);
+            Eyelink('Message', 'Test sound played.');
+            Eyelink('Message', 'TRIGGER %03d', testSoundTrigger);
         end
         
         % 4. Write into logfile
         fprintf(LOGFILEevents,'\n%d', iSub);
         fprintf(LOGFILEevents,'\t%d', iContingency);
-        fprintf(LOGFILEevents,'\t%d', iBlock); % iBlock
-        fprintf(LOGFILEevents,'\tNaN'); % Trial number
-        fprintf(LOGFILEevents,'\t%d', condition); % Condition: actively or passively learned?
-        fprintf(LOGFILEevents,'\t%d', TrialType); % TrialType: 1 = acquisition, 2 = test
-        fprintf(LOGFILEevents,'\t%d', 1); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
-        fprintf(LOGFILEevents,'\t%d', testTrialStart-ExperimentStartTime); % event time
-        fprintf(LOGFILEevents,'\tNaN'); % SoundID
-        fprintf(LOGFILEevents,'\tNaN'); % AnimationID
-        fprintf(LOGFILEevents,'\tNaN'); % MovDir
-        fprintf(LOGFILEevents,'\tNaN'); % Congruency
-        fprintf(LOGFILEevents,'\tNaN'); % Response
+        fprintf(LOGFILEevents,'\t%d', iBlock);
+        fprintf(LOGFILEevents,'\t%d', iTest); % Trial number
+        fprintf(LOGFILEevents, '\t%d', condition); % Condition: actively or passively learned?
+        fprintf(LOGFILEevents,'\t%d', TrialType);
+        fprintf(LOGFILEevents,'\t%d', 3); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
+        fprintf(LOGFILEevents, '\t%d', testSoundTime-ExperimentStartTime); % event time
+        fprintf(LOGFILEevents, '\t%d', testtrials(2,iTest)); % SoundID
+        fprintf(LOGFILEevents, '\t%d', animationID);
+        fprintf(LOGFILEevents, '\t%d', testtrials(1,iTest)); % MovDir
+        fprintf(LOGFILEevents, '\t%d', testtrials(3,iTest)); % Congruency
+        fprintf(LOGFILEevents, '\tNaN'); % Response (does not apply here)
         
         % END REPORT
-    end
-    
-    Screen('Flip',window, (testTrialStart+0.5));
-    
-    if testtrials(1,iTest) == 1 % If the moveDirectionection of movement is 1
-        animation = randi(6); % There are 6 different animations that have moveDirectionection 1
-        switch animation
-            case 1
-                % Animation 2-1, moveDirection: 1
-                animationID = 4;
-                xDot = pos2(1);
-                yDot = pos2(2);
-                while xDot > pos1(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    % xDot = xDot - speed;
-                    xDot = xDot-speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 2
-                % Animation 3-2, moveDirection: 1
-                animationID = 9;
-                xDot = pos3(1);
-                yDot = pos3(2);
-                while xDot > pos2(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    xDot = xDot - speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 3
-                % Animation 5-4, moveDirection: 1
-                animationID = 20;
-                xDot = pos5(1);
-                yDot = pos5(2);
-                while xDot > pos4(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    xDot = xDot - speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 4
-                % Animation 6-5, moveDirection: 1
-                animationID = 27;
-                xDot = pos6(1);
-                yDot = pos6(2);
-                while xDot > pos5(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    xDot = xDot - speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 5
-                % Animation 8-7, moveDirection: 1
-                animationID = 36;
-                xDot = pos8(1);
-                yDot = pos8(2);
-                while xDot > pos7(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    xDot = xDot - speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 6
-                % Animation 9-8, moveDirection: 1
-                animationID = 40;
-                xDot = pos9(1);
-                yDot = pos9(2);
-                while xDot > pos8(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    xDot = xDot - speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-        end
-    elseif testtrials(1,iTest) == 2 % If the moveDirectionection of movement is 2
-        animation = randi(6); % There are 6 different animations that have moveDirectionection 2
-        switch animation
-            case 1
-                % Animation 1-2, moveDirection: 2
-                animationID = 1;
-                xDot = pos1(1);
-                yDot = pos1(2);
-                while xDot < pos2(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    xDot = xDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 2
-                % Animation 2-3, moveDirection: 2
-                animationID = 5;
-                xDot = pos2(1);
-                yDot = pos2(2);
-                while xDot < pos3(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    xDot = xDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 3
-                % Animation 4-5, moveDirection: 2
-                animationID = 14;
-                xDot = pos4(1);
-                yDot = pos4(2);
-                while xDot < pos5(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    xDot = xDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 4
-                % Animation 5-6, moveDirection: 2
-                animationID = 21;
-                xDot = pos5(1);
-                yDot = pos5(2);
-                while xDot < pos6(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    xDot = xDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 5
-                % Animation 7-8, moveDirection: 2
-                animationID = 32;
-                xDot = pos7(1);
-                yDot = pos7(2);
-                while xDot < pos8(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    xDot = xDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 6
-                % Animation 8-9, moveDirection: 2
-                animationID = 37;
-                xDot = pos8(1);
-                yDot = pos8(2);
-                while xDot < pos9(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    xDot = xDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-        end
-    elseif testtrials(1,iTest) == 3 % If the moveDirectionection of movement is 3
-        animation = randi(6); % There are 6 different animations that have moveDirectionection 3
-        switch animation
-            case 1
-                % Animation 4-1, moveDirection: 3
-                animationID = 12;
-                xDot = pos4(1);
-                yDot = pos4(2);
-                while yDot > pos1(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot - speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 2
-                % Animation 5-2, moveDirection: 3
-                animationID = 18;
-                xDot = pos5(1);
-                yDot = pos5(2);
-                while yDot > pos2(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot - speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 3
-                % Animation 6-3, moveDirection: 3
-                animationID = 26;
-                xDot = pos6(1);
-                yDot = pos6(2);
-                while yDot > pos3(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot - speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 4
-                % Animation 7-4, moveDirection: 3
-                animationID = 30;
-                xDot = pos7(1);
-                yDot = pos7(2);
-                while yDot > pos4(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot - speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 5
-                % Animation 8-5, moveDirection: 3
-                animationID = 34;
-                xDot = pos8(1);
-                yDot = pos8(2);
-                while yDot > pos5(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot - speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 6
-                % Animation 9-6, moveDirection: 3
-                animationID = 39;
-                xDot = pos9(1);
-                yDot = pos9(2);
-                while yDot > pos6(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot - speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-        end % switch
         
-    elseif testtrials(1,iTest) == 4 % If the moveDirectionection of movement is 4
-        animation = randi(6); % There are 6 different animations that have moveDirectionection 4 (last one where this is the case)
-        switch animation
-            case 1
-                % Animation 1-4, moveDirection: 4
-                animationID = 2;
-                xDot = pos1(1);
-                yDot = pos1(2);
-                while yDot < pos4(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 2
-                % Animation 2-5, moveDirection: 4
-                animationID = 7;
-                xDot = pos2(1);
-                yDot = pos2(2);
-                while yDot < pos5(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 3
-                % Animation 3-6, moveDirection: 4
-                animationID = 11;
-                xDot = pos3(1);
-                yDot = pos3(2);
-                while yDot < pos6(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 4
-                % Animation 4-7, moveDirection: 4
-                animationID = 15;
-                xDot = pos4(1);
-                yDot = pos4(2);
-                while yDot < pos7(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 5
-                % Animation 5-8, moveDirection: 4
-                animationID = 23;
-                xDot = pos5(1);
-                yDot = pos5(2);
-                while yDot < pos8(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 6
-                % Animation 6-9, moveDirection: 4
-                animationID = 29;
-                xDot = pos6(1);
-                yDot = pos6(2);
-                while yDot < pos9(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-        end % switch
-    elseif testtrials(1,iTest) == 5 % If the moveDirectionection of movement is 5
-        animation = randi(4); % There are 4 different animations that have moveDirectionection 5
-        switch animation
-            case 1
-                % Animation 5-1, moveDirection: 5
-                animationID = 17;
-                xDot = pos5(1);
-                yDot = pos5(2);
-                while yDot > pos1(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot - speed;
-                    xDot = xDot - speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 2
-                % Animation 6-2, moveDirection: 5
-                animationID = 25;
-                xDot = pos6(1);
-                yDot = pos6(2);
-                while yDot > pos2(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot - speed;
-                    xDot = xDot - speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 3
-                % Animation 8-4, moveDirection: 5
-                animationID = 33;
-                xDot = pos8(1);
-                yDot = pos8(2);
-                while xDot > pos4(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    xDot = xDot - speed;
-                    yDot = yDot - speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 4
-                % Animation 9-5, moveDirection: 5
-                animationID = 38;
-                xDot = pos9(1);
-                yDot = pos9(2);
-                while xDot > pos5(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    xDot = xDot - speed;
-                    yDot = yDot - speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-        end % switch
-    elseif testtrials(1,iTest) == 6 % If the moveDirectionection of movement is 6
-        animation = randi(4); % There are 4 different animations that have moveDirectionection 6
-        switch animation
-            case 1
-                % Animation 2-4, moveDirection: 6
-                animationID = 6;
-                xDot = pos2(1);
-                yDot = pos2(2);
-                while xDot > pos4(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    xDot = xDot - speed;
-                    yDot = yDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 2
-                % Animation 3-5, moveDirection: 6
-                animationID = 10;
-                xDot = pos3(1);
-                yDot = pos3(2);
-                while xDot > pos5(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    xDot = xDot - speed;
-                    yDot = yDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 3
-                % Animation 5-7, moveDirection: 6
-                animationID = 22;
-                xDot = pos5(1);
-                yDot = pos5(2);
-                while yDot < pos7(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot + speed;
-                    xDot = xDot - speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 4
-                % Animation 6-8, moveDirection: 6
-                animationID = 28;
-                xDot = pos6(1);
-                yDot = pos6(2);
-                while xDot > pos8(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    xDot = xDot - speed;
-                    yDot = yDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-        end % switch
-    elseif testtrials(1,iTest) == 7 % If the moveDirectionection of movement is 7
-        animation = randi(4); % There are 4 different animations that have moveDirectionection 7
-        switch animation
-            case 1
-                % Animation 4-2, moveDirection: 7
-                animationID = 13;
-                xDot = pos4(1);
-                yDot = pos4(2);
-                while yDot > pos2(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot - speed;
-                    xDot = xDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 2
-                % Animation 5-3, moveDirection: 7
-                animationID = 19;
-                xDot = pos5(1);
-                yDot = pos5(2);
-                while yDot > pos3(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot - speed;
-                    xDot = xDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 3
-                % Animation 7-5, moveDirection: 7
-                animationID = 31;
-                xDot = pos7(1);
-                yDot = pos7(2);
-                while yDot > pos5(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot - speed;
-                    xDot = xDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 4
-                % Animation 8-6, moveDirection: 7
-                animationID = 35;
-                xDot = pos8(1);
-                yDot = pos8(2);
-                while yDot > pos6(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot - speed;
-                    xDot = xDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-        end % switch
-    elseif testtrials(1,iTest) == 8 % If the moveDirectionection of movement is 8
-        animation = randi(4); % There are 4 different animations that have moveDirectionection 8
-        switch animation
-            case 1
-                % Animation 1-5, moveDirection: 8
-                animationID = 3;
-                xDot = pos1(1);
-                yDot = pos1(2);
-                while yDot < pos5(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot + speed;
-                    xDot = xDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 2
-                % Animation 2-6, moveDirection: 8
-                animationID = 8;
-                xDot = pos2(1);
-                yDot = pos2(2);
-                while xDot < pos6(1)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    xDot = xDot + speed;
-                    yDot = yDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 3
-                % Animation 4-8, moveDirection: 8
-                animationID = 16;
-                xDot = pos4(1);
-                yDot = pos4(2);
-                while yDot < pos8(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot + speed;
-                    xDot = xDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-            case 4
-                % Animation 5-9, moveDirection: 8
-                animationID = 24;
-                xDot = pos5(1);
-                yDot = pos5(2);
-                while yDot < pos9(2)
-                    % Draw matrix
-                    Screen('DrawDots', window, dotPositionMatrix, dotBig, dotRed, dotCenter, 0);
-                    Screen('DrawDots', window, dotPositionMatrix, dotSmall, dotBlack, dotCenter, 0);
-                    % Make dot move at "speed"
-                    yDot = yDot + speed;
-                    xDot = xDot + speed;
-                    % Draw dot
-                    animationStart = GetSecs;
-                    Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
-                    vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
-                end
-        end % very long switch
-    end % if-statement for movement moveDirectionections
-    
-    % Present test sound
-    testSoundTime = GetSecs;
-    PsychPortAudio('Start', paHandle, 1);
-    
-    % REPORT EVENT: TEST SOUND %
-    
-    % 1. Create trigger
-    
-    % Prepare trigger code for test sounds
-    if testtrials(3,iTest) == 0
-        congruencyCode = 2;
-    elseif testtrials(3,iTest) == 1
-        congruencyCode = 1;
-    end
-    
-    % Trigger consists of congruency (1 or 2), active/passive
-    % (1 or 2) and block (1-6)
-    testSoundTrigger = str2double(sprintf('%d%d%d', congruencyCode, contingencies(iContingency), iBlock));
-    
-    % 2. Send porttalk trigger
-    if port_exist == 1
-        porttalk(hex2dec('CFB8'), testSoundTrigger, 1000);
-    end
-    
-    % 3. Send Eyelink message
-    if dummymode == 0
-        Eyelink('Message', 'Test sound played.');
-        Eyelink('Message', 'TRIGGER %03d', testSoundTrigger);
-    end
-    
-    % 4. Write into logfile
-    fprintf(LOGFILEevents,'\n%d', iSub);
-    fprintf(LOGFILEevents,'\t%d', iContingency);
-    fprintf(LOGFILEevents,'\t%d', iBlock);
-    fprintf(LOGFILEevents,'\t%d', iTest); % Trial number
-    fprintf(LOGFILEevents, '\t%d', condition); % Condition: actively or passively learned?
-    fprintf(LOGFILEevents,'\t%d', TrialType);
-    fprintf(LOGFILEevents,'\t%d', 3); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
-    fprintf(LOGFILEevents, '\t%d', testSoundTime-ExperimentStartTime); % event time
-    fprintf(LOGFILEevents, '\t%d', testtrials(2,iTest)); % SoundID
-    fprintf(LOGFILEevents, '\t%d', animationID);
-    fprintf(LOGFILEevents, '\t%d', testtrials(1,iTest)); % MovDir
-    fprintf(LOGFILEevents, '\t%d', testtrials(3,iTest)); % Congruency
-    fprintf(LOGFILEevents, '\tNaN'); % Response (does not apply here)
-    
-    % END REPORT
-    
-    % --- Question & response ---
-    Screen('TextSize', window, 60);
-    if EyeSound_data(iSub).Counterbalancing == 1 % Left is no
-        DrawFormattedText(window, 'NO     ?     YES', 'center', 'center', white);
-    elseif EyeSound_data(iSub).Counterbalancing == 2 % Left is yes
-        DrawFormattedText(window, 'YES    ?      NO', 'center', 'center', white);
-    end
-    
-    questionTime = GetSecs;
-    Screen('Flip',window,(testSoundTime+1)); % I made this 2 seconds because 1 second felt super fast
-    
-    % REPORT EVENT: CUE (Question) %
-    
-    % 1. Create trigger
-    
-    QuestionTrigger = 247;
-    
-    % 2. Send porttalk trigger
-    if port_exist == 1
-        porttalk(hex2dec('CFB8'), QuestionTrigger, 1000);
-    end
-    
-    % 3. Send Eyelink message
-    if dummymode == 0
-        Eyelink('Message', 'Question displayed.');
-        Eyelink('Message', 'TRIGGER %03d', QuestionTrigger);
-    end
-    
-    % 4. Write into logfile
-    fprintf(LOGFILEevents,'\n%d', iSub);
-    fprintf(LOGFILEevents,'\t%d', iContingency);
-    fprintf(LOGFILEevents,'\t%d', iBlock);
-    fprintf(LOGFILEevents,'\t%d', iTest); % Trial number
-    fprintf(LOGFILEevents, '\t%d', condition); % Condition: actively or passively learned?
-    fprintf(LOGFILEevents,'\t%d', TrialType);
-    fprintf(LOGFILEevents,'\t%d', 1); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
-    fprintf(LOGFILEevents, '\t%d', questionTime-ExperimentStartTime); % event time
-    fprintf(LOGFILEevents, '\tNaN'); % SoundID does not apply
-    fprintf(LOGFILEevents, '\tNaN'); % AnimationID does not apply
-    fprintf(LOGFILEevents, '\tNaN'); % MovDir does not apply
-    fprintf(LOGFILEevents, '\tNaN'); % Congruency does not apply
-    fprintf(LOGFILEevents, '\tNaN'); % Response (does not apply here)
-    
-    % END REPORT
-    
-    response = -1; % We need this variable to hold something in case people don't press a button
-    % Clear any accidental presses before the instruction appeared
-    keyCode = [];
-    while (GetSecs-questionTime) <= MaxResp % Maximum response time
-        if nano_exist == 0
-            [~, ~, keyCode] = KbCheck;
-            if keyCode(YesKey)
-                % responseTrigger = 88;
-                response = 1;
-                DrawFormattedText(window, '+', 'center', 'center', white);
-                responseTime = GetSecs;
-                Screen('Flip', window);
-            elseif keyCode(NoKey)
-                % responseTrigger = 89;
-                response = 0;
-                DrawFormattedText(window, '+', 'center', 'center', white);
-                responseTime = GetSecs;
-                Screen('Flip', window);
-            end
-        elseif nano_exist == 1
-            % Clear any accidental presses before the instruction appeared
-            [key,time,messages,Ts] = getmidiresp(); %
-            key = [];
-            % Check for key presses
-            while isempty(key) && (GetSecs-questionTime) <= MaxResp
-                WaitSecs(0.005);
-                [key,time,messages,Ts] = getmidiresp();
-            end
-            if ~isempty(key) % if a response key is pressed
-                if key == nanoYES
+        % --- Question & response ---
+        Screen('TextSize', window, 60);
+        if EyeSound_data(iSub).Counterbalancing == 1 % Left is no
+            DrawFormattedText(window, 'NO     ?     YES', 'center', 'center', white);
+        elseif EyeSound_data(iSub).Counterbalancing == 2 % Left is yes
+            DrawFormattedText(window, 'YES    ?      NO', 'center', 'center', white);
+        end
+        
+        questionTime = GetSecs;
+        Screen('Flip',window,(testSoundTime+1)); % I made this 2 seconds because 1 second felt super fast
+        
+        % REPORT EVENT: CUE (Question) %
+        
+        % 1. Create trigger
+        
+        QuestionTrigger = 247;
+        
+        % 2. Send porttalk trigger
+        if port_exist == 1
+            porttalk(hex2dec('CFB8'), QuestionTrigger, 1000);
+        end
+        
+        % 3. Send Eyelink message
+        if dummymode == 0
+            Eyelink('Message', 'Question displayed.');
+            Eyelink('Message', 'TRIGGER %03d', QuestionTrigger);
+        end
+        
+        % 4. Write into logfile
+        fprintf(LOGFILEevents,'\n%d', iSub);
+        fprintf(LOGFILEevents,'\t%d', iContingency);
+        fprintf(LOGFILEevents,'\t%d', iBlock);
+        fprintf(LOGFILEevents,'\t%d', iTest); % Trial number
+        fprintf(LOGFILEevents, '\t%d', condition); % Condition: actively or passively learned?
+        fprintf(LOGFILEevents,'\t%d', TrialType);
+        fprintf(LOGFILEevents,'\t%d', 1); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
+        fprintf(LOGFILEevents, '\t%d', questionTime-ExperimentStartTime); % event time
+        fprintf(LOGFILEevents, '\tNaN'); % SoundID does not apply
+        fprintf(LOGFILEevents, '\tNaN'); % AnimationID does not apply
+        fprintf(LOGFILEevents, '\tNaN'); % MovDir does not apply
+        fprintf(LOGFILEevents, '\tNaN'); % Congruency does not apply
+        fprintf(LOGFILEevents, '\tNaN'); % Response (does not apply here)
+        
+        % END REPORT
+        
+        response = -1; % We need this variable to hold something in case people don't press a button
+        % Clear any accidental presses before the instruction appeared
+        keyCode = [];
+        while (GetSecs-questionTime) <= MaxResp % Maximum response time
+            if nano_exist == 0
+                [~, ~, keyCode] = KbCheck;
+                if keyCode(YesKey)
                     % responseTrigger = 88;
                     response = 1;
                     DrawFormattedText(window, '+', 'center', 'center', white);
                     responseTime = GetSecs;
                     Screen('Flip', window);
-                elseif key == nanoNO
-                    % responseTrigger == 89;
+                elseif keyCode(NoKey)
+                    % responseTrigger = 89;
                     response = 0;
                     DrawFormattedText(window, '+', 'center', 'center', white);
                     responseTime = GetSecs;
                     Screen('Flip', window);
                 end
+            elseif nano_exist == 1
+                % Clear any accidental presses before the instruction appeared
+                [key,time,messages,Ts] = getmidiresp(); %
+                key = [];
+                % Check for key presses
+                while isempty(key) && (GetSecs-questionTime) <= MaxResp
+                    WaitSecs(0.005);
+                    [key,time,messages,Ts] = getmidiresp();
+                end
+                if ~isempty(key) % if a response key is pressed
+                    if key == nanoYES
+                        % responseTrigger = 88;
+                        response = 1;
+                        DrawFormattedText(window, '+', 'center', 'center', white);
+                        responseTime = GetSecs;
+                        Screen('Flip', window);
+                    elseif key == nanoNO
+                        % responseTrigger == 89;
+                        response = 0;
+                        DrawFormattedText(window, '+', 'center', 'center', white);
+                        responseTime = GetSecs;
+                        Screen('Flip', window);
+                    end
+                end
             end
         end
+        
+        if response == -1 % after time is up
+            response = NaN; % miss
+            responseTime = GetSecs;
+        end
+        
+        
+        % REPORT EVENT: RESPONSE %
+        
+        % 1. Create trigger
+        
+        ReponseTrigger = 246;
+        
+        if ~isnan(response) % Send these triggers only if a response was made
+            % 2. Send porttalk trigger
+            if port_exist == 1
+                porttalk(hex2dec('CFB8'), ReponseTrigger, 1000);
+            end
+            
+            % 3. Send Eyelink message
+            if dummymode == 0
+                Eyelink('Message', 'Participant made a response.');
+                Eyelink('Message', 'TRIGGER %03d', ReponseTrigger);
+            end
+        end
+        
+        % 4. Write into logfile
+        fprintf(LOGFILEevents,'\n%d', iSub);
+        fprintf(LOGFILEevents,'\t%d', iContingency);
+        fprintf(LOGFILEevents,'\t%d', iBlock);
+        fprintf(LOGFILEevents,'\t%d', iTest); % Trial number
+        fprintf(LOGFILEevents,'\t%d', condition); % Condition: actively or passively learned?
+        fprintf(LOGFILEevents,'\t%d', TrialType);
+        fprintf(LOGFILEevents,'\t%d', 4); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
+        fprintf(LOGFILEevents,'\t%d', responseTime-ExperimentStartTime); % event time
+        fprintf(LOGFILEevents,'\t%d', testtrials(2,iTest)); % SoundID
+        fprintf(LOGFILEevents,'\t%d', animationID);
+        fprintf(LOGFILEevents,'\t%d', testtrials(1,iTest)); % MovDir
+        fprintf(LOGFILEevents,'\t%d', testtrials(3,iTest)); % Congruency
+        fprintf(LOGFILEevents,'\t%d', response); % Response
+        
+        % END REPORT
+        
+    end % for-loop for test trials
+    
+    if iBlock < nBlocks
+        % Wait for button press from experimenter before being able to
+        % continue
+        DrawFormattedText(window, 'El experimentador iniciar· el siguiente bloque.', 'center', 'center', white);
+        Screen('Flip',window);
+        KbStrokeWait; % Wait for experimenter BP
     end
-    
-    if response == -1 % after time is up
-        response = NaN; % miss
-        responseTime = GetSecs;
-    end
-    
-    
-    % REPORT EVENT: RESPONSE %
-    
-    % 1. Create trigger
-    
-    ReponseTrigger = 246;
-    
-    % 2. Send porttalk trigger
-    if port_exist == 1
-        porttalk(hex2dec('CFB8'), ReponseTrigger, 1000);
-    end
-    
-    % 3. Send Eyelink message
-    if dummymode == 0
-        Eyelink('Message', 'Participant made a response.');
-        Eyelink('Message', 'TRIGGER %03d', ReponseTrigger);
-    end
-    
-    % 4. Write into logfile
-    fprintf(LOGFILEevents,'\n%d', iSub);
-    fprintf(LOGFILEevents,'\t%d', iContingency);
-    fprintf(LOGFILEevents,'\t%d', iBlock);
-    fprintf(LOGFILEevents,'\t%d', iTest); % Trial number
-    fprintf(LOGFILEevents,'\t%d', condition); % Condition: actively or passively learned?
-    fprintf(LOGFILEevents,'\t%d', TrialType);
-    fprintf(LOGFILEevents,'\t%d', 4); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
-    fprintf(LOGFILEevents,'\t%d', responseTime-ExperimentStartTime); % event time
-    fprintf(LOGFILEevents,'\t%d', testtrials(2,iTest)); % SoundID
-    fprintf(LOGFILEevents,'\t%d', animationID);
-    fprintf(LOGFILEevents,'\t%d', testtrials(1,iTest)); % MovDir
-    fprintf(LOGFILEevents,'\t%d', testtrials(3,iTest)); % Congruency
-    fprintf(LOGFILEevents,'\t%d', response); % Response
-    
-    % END REPORT
-    
-end % for-loop for test trials
-
-if iBlock < nBlocks
-    % Wait for button press from experimenter before being able to
-    % continue
-    DrawFormattedText(window, 'El experimentador iniciar√° el siguiente bloque.', 'center', 'center', white);
-    Screen('Flip',window);
-    KbStrokeWait; % Wait for experimenter BP
 end
-
 if dummymode == 0
     Eyelink('StopRecording'); % Eyelink takes recording breaks between levels
 end
@@ -1920,7 +1920,7 @@ end
 if iContingency < length(contingencies)
     % Wait for button press from experimenter before being able to
     % continue
-    DrawFormattedText(window, 'El experimentador iniciar√° el siguiente nivel.', 'center', 'center', white);
+    DrawFormattedText(window, 'El experimentador iniciar· el siguiente nivel.', 'center', 'center', white);
     Screen('Flip',window);
     keyIsDown = 0; FlushEvents('keyDown');
     while keyIsDown ==0

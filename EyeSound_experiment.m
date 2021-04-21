@@ -7,7 +7,7 @@
 cd 'C:\USER\Stefanie\EyeSound\'
 
 % What number is the participant?
-iSub = 2;
+iSub = 1;
 
 % Check counterbalancing of participant and note it down on the "experiment 
 % sheet"
