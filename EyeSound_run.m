@@ -50,7 +50,7 @@ end
 nTests = 1; % should be 6
 nBlocks = 1; % should be 7
 MaxResp = 2.5; % Maximum response time for questions in s
-AcquisitionDur = 20; % 20sec for acquisition trials, less for debugging
+AcquisitionDur = 5; % 20sec for acquisition trials, less for debugging
 ttCounter = 7; % If we did one level of training, that should be 7 (blocks)
 % If we did two contingencies of training, it would be 14, etc.
 columnX = []; % initialise this variable so it exists
@@ -106,7 +106,7 @@ currentMouse = [-1 -1];
 soundPlayed = 0; % Sound identity (Factor)
 
 % This is needed for the animations
-speed = 7.5; % This is how fast animation moves!!!
+speed = 8; % This is how fast animation moves. In the lab, if the speed is 8, the duration of the animations will be 0.5 seconds
 ifi = Screen('GetFlipInterval', window); % You need this for the animations
 vbl=Screen('Flip', window); % You need this for the animations
 
@@ -239,8 +239,8 @@ if dummymode == 0
     % Calibrate the eye tracker
     EyelinkDoTrackerSetup(el);
     
-    % do a final check of calibration using driftcorrection
-    EyelinkDoDriftCorrection(el);
+%     % do a final check of calibration using driftcorrection
+%     EyelinkDoDriftCorrection(el);
     
     % Title message to EDF file
     Eyelink('command', 'add_file_preamble_text ''Eye-tracker data from EyeSound training.''');
@@ -293,7 +293,7 @@ device = [];
 InitializePsychSound(1); % Initialize the sound device
 
 headphone_factor = 0.750; % I chose this because it's in the middle between two that were used in IluAg
-starting_dB = 50;
+starting_dB = 70;
 intfactor = 10^((starting_dB-100)/20)*headphone_factor;
 
 if headphones == 0
@@ -468,8 +468,9 @@ end
 % New sounds
 Screen('TextSize', window, 60);
 DrawFormattedText(window, 'NUEVOS SONIDOS', 'center', 'center',white);
-ContingencyStartTime = GetSecs;
-Screen('Flip',window);
+% ContingencyStartTime = GetSecs;
+[~ , ContingencyStartTime,~,~] = Screen('Flip',window);
+WaitSecs(0.5);
 
 % REPORT EVENT: CUE %
 
@@ -521,7 +522,7 @@ for iBlock = 1:nBlocks
     
     TrialType = 1; % acquisition trial
     
-    if contingencies(iContingency) == 1 && dummymode == 0
+    if dummymode == 0
         % do a check of calibration using driftcorrection
         EyelinkDoDriftCorrection(el);
     end
@@ -534,11 +535,11 @@ for iBlock = 1:nBlocks
         DrawFormattedText(window, 'OBSERVAR', 'center', 'center',white);
     end
     
-    Screen('Flip',window, ContingencyStartTime+1); % Show explore cue 1s after "Nuevos sonidos"
-    ExploreCue = GetSecs;
+    [~ , ExploreCue,~,~] = Screen('Flip',window, ContingencyStartTime+1.5); % Show explore cue 1s after "Nuevos sonidos"
+%     ExploreCue = GetSecs;
     
-    Screen('Flip',window, (ExploreCue+0.5));
-    AcquisitionStartTime = GetSecs;
+    [~ , AcquisitionStartTime,~,~] = Screen('Flip',window, (ExploreCue+0.5));
+%     AcquisitionStartTime = GetSecs;
     
     % REPORT EVENT: CUE %
     
@@ -585,7 +586,7 @@ for iBlock = 1:nBlocks
     end
     
     % TRY START RECORDING HERE
-    if dummymode == 0 && contingencies(iContingency) == 1
+    if dummymode == 0 
         Eyelink('Message', 'New level: %d.', iContingency);
         Eyelink('Message', 'TRIGGER %03d', ContingencyStartTrigger);
         % The message below will be shown on the host PC
@@ -618,10 +619,10 @@ for iBlock = 1:nBlocks
     
     % Prepare the timer that plays sound with delay of 1 sec
     soundTimer = timer;
-    soundTimer.StartDelay = 1;
+    soundTimer.StartDelay = 0.75;
     soundTimer.TimerFcn = @(x,y)eval(PsychPortAudio('Start', paHandle, 1));
     reportTimer = timer;
-    reportTimer.StartDelay = 1;
+    reportTimer.StartDelay = 0.75;
     
     % Start the animation
     
@@ -659,8 +660,8 @@ for iBlock = 1:nBlocks
                 if Eyelink( 'NewFloatSampleAvailable') > 0
                     % get the sample in the form of an event structure
                     evt = Eyelink( 'NewestFloatSample');
-                    evt.gx;
-                    evt.gy;
+                    evt.gx
+                    evt.gy
                     if eye_used ~= -1 % do we know which eye to use yet?
                         % if we do, get current gaze position from sample
                         x = evt.gx(eye_used+1); % +1 as we're accessing MATLAB array
@@ -975,7 +976,8 @@ for iBlock = 1:nBlocks
     Screen('TextSize', window, 60);
     DrawFormattedText(window, 'Se acabó el tiempo!', 'center', 'center',white);
     Screen('Flip',window);
-    Screen('Flip',window, (endExplore+0.5)); % 0.5s after "Se acabÃ³ el tiempo"
+    WaitSecs(0.5);
+    Screen('Flip',window); 
     previousStop = -1; % Second to last stop at a significant location
     lastStop = -1; % Last stop at a significant location
     moveDirection = -1; % Last significant movement between two stops
@@ -989,8 +991,8 @@ for iBlock = 1:nBlocks
         PsychPortAudio('FillBuffer', paHandle, testsound);
         Screen('TextSize', window, 60);
         DrawFormattedText(window, 'TEST', 'center', 'center',white);
-        testTrialStart = GetSecs;
-        Screen('Flip',window);
+%         testTrialStart = GetSecs;
+        [~ , testTrialStart,~,~] = Screen('Flip',window);
         
         if iTest == 1
             % REPORT EVENT: TEST TRIALS BEGIN %
@@ -1046,7 +1048,7 @@ for iBlock = 1:nBlocks
                         % xDot = xDot - speed;
                         xDot = xDot-speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1062,7 +1064,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         xDot = xDot - speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1078,7 +1080,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         xDot = xDot - speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1094,7 +1096,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         xDot = xDot - speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1110,7 +1112,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         xDot = xDot - speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1126,7 +1128,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         xDot = xDot - speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1146,7 +1148,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         xDot = xDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1162,7 +1164,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         xDot = xDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1178,7 +1180,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         xDot = xDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1194,7 +1196,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         xDot = xDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1210,7 +1212,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         xDot = xDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1226,7 +1228,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         xDot = xDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1246,7 +1248,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         yDot = yDot - speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1262,7 +1264,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         yDot = yDot - speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1278,7 +1280,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         yDot = yDot - speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1294,7 +1296,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         yDot = yDot - speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1310,7 +1312,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         yDot = yDot - speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1326,7 +1328,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         yDot = yDot - speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1347,7 +1349,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         yDot = yDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1363,7 +1365,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         yDot = yDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1379,7 +1381,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         yDot = yDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1395,7 +1397,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         yDot = yDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1411,7 +1413,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         yDot = yDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1427,7 +1429,7 @@ for iBlock = 1:nBlocks
                         % Make dot move at "speed"
                         yDot = yDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1448,7 +1450,7 @@ for iBlock = 1:nBlocks
                         yDot = yDot - speed;
                         xDot = xDot - speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1465,7 +1467,7 @@ for iBlock = 1:nBlocks
                         yDot = yDot - speed;
                         xDot = xDot - speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1482,7 +1484,7 @@ for iBlock = 1:nBlocks
                         xDot = xDot - speed;
                         yDot = yDot - speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1499,7 +1501,7 @@ for iBlock = 1:nBlocks
                         xDot = xDot - speed;
                         yDot = yDot - speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1520,7 +1522,7 @@ for iBlock = 1:nBlocks
                         xDot = xDot - speed;
                         yDot = yDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1537,7 +1539,7 @@ for iBlock = 1:nBlocks
                         xDot = xDot - speed;
                         yDot = yDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1554,7 +1556,7 @@ for iBlock = 1:nBlocks
                         yDot = yDot + speed;
                         xDot = xDot - speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1571,7 +1573,7 @@ for iBlock = 1:nBlocks
                         xDot = xDot - speed;
                         yDot = yDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1592,7 +1594,7 @@ for iBlock = 1:nBlocks
                         yDot = yDot - speed;
                         xDot = xDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1609,7 +1611,7 @@ for iBlock = 1:nBlocks
                         yDot = yDot - speed;
                         xDot = xDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1626,7 +1628,7 @@ for iBlock = 1:nBlocks
                         yDot = yDot - speed;
                         xDot = xDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1643,7 +1645,7 @@ for iBlock = 1:nBlocks
                         yDot = yDot - speed;
                         xDot = xDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1664,7 +1666,7 @@ for iBlock = 1:nBlocks
                         yDot = yDot + speed;
                         xDot = xDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1681,7 +1683,7 @@ for iBlock = 1:nBlocks
                         xDot = xDot + speed;
                         yDot = yDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1698,7 +1700,7 @@ for iBlock = 1:nBlocks
                         yDot = yDot + speed;
                         xDot = xDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1715,7 +1717,7 @@ for iBlock = 1:nBlocks
                         yDot = yDot + speed;
                         xDot = xDot + speed;
                         % Draw dot
-                        animationStart = GetSecs;
+                        % animationStart = GetSecs;
                         Screen('DrawDots', window, [xDot yDot], 20, white, [], 2);
                         vbl=Screen('Flip', window,vbl+ifi/2); % God knows what this does but we need it
                     end
@@ -1723,9 +1725,10 @@ for iBlock = 1:nBlocks
         end % if-statement for movement moveDirectionections
         
         % Present test sound
-        WaitSecs(1);
-        testSoundTime = GetSecs;
-        PsychPortAudio('Start', paHandle, 1);
+        WaitSecs(0.75);
+%         testSoundTime = GetSecs;
+        [testSoundTime] = PsychPortAudio('Start', paHandle, 1);
+        tic
         
         % REPORT EVENT: TEST SOUND %
         
@@ -1778,8 +1781,10 @@ for iBlock = 1:nBlocks
             DrawFormattedText(window, 'YES    ?      NO', 'center', 'center', white);
         end
         
-        questionTime = GetSecs;
-        Screen('Flip',window,(testSoundTime+1)); % I made this 2 seconds because 1 second felt super fast
+%         questionTime = GetSecs;
+        WaitSecs(1); % If I do it any other way it just doesn't work
+        [~ , questionTime,~,~] = Screen('Flip',window); % I made this 2 seconds because 1 second felt super fast
+        toc
         
         % REPORT EVENT: CUE (Question) %
         
@@ -1825,37 +1830,37 @@ for iBlock = 1:nBlocks
                     % responseTrigger = 88;
                     response = 1;
                     DrawFormattedText(window, '+', 'center', 'center', white);
-                    responseTime = GetSecs;
-                    Screen('Flip', window);
+%                     responseTime = GetSecs;
+                    [~ , responseTime,~,~] = Screen('Flip', window);
                 elseif keyCode(NoKey)
                     % responseTrigger = 89;
                     response = 0;
                     DrawFormattedText(window, '+', 'center', 'center', white);
-                    responseTime = GetSecs;
-                    Screen('Flip', window);
+%                     responseTime = GetSecs;
+                    [~ , responseTime,~,~] = Screen('Flip', window);
                 end
             elseif nano_exist == 1
                 % Clear any accidental presses before the instruction appeared
-                [key,time,messages,Ts] = getmidiresp(); %
+                [key,~,~,~] = getmidiresp(); %
                 key = [];
                 % Check for key presses
                 while isempty(key) && (GetSecs-questionTime) <= MaxResp
                     WaitSecs(0.005);
-                    [key,time,messages,Ts] = getmidiresp();
+                    [key,~,~,~] = getmidiresp();
                 end
                 if ~isempty(key) % if a response key is pressed
                     if key == nanoYES
                         % responseTrigger = 88;
                         response = 1;
                         DrawFormattedText(window, '+', 'center', 'center', white);
-                        responseTime = GetSecs;
-                        Screen('Flip', window);
+%                         responseTime = GetSecs;
+                        [~ , responseTime,~,~] = Screen('Flip', window);
                     elseif key == nanoNO
                         % responseTrigger == 89;
                         response = 0;
                         DrawFormattedText(window, '+', 'center', 'center', white);
-                        responseTime = GetSecs;
-                        Screen('Flip', window);
+%                         responseTime = GetSecs;
+                        [~ , responseTime,~,~] = Screen('Flip', window);
                     end
                 end
             end
@@ -1923,8 +1928,8 @@ if iContingency < length(contingencies)
     DrawFormattedText(window, 'El experimentador iniciará el siguiente nivel.', 'center', 'center', white);
     Screen('Flip',window);
     keyIsDown = 0; FlushEvents('keyDown');
-    while keyIsDown ==0
-        [keyIsDown, secs, keyCode] = KbCheck;
+    while keyIsDown == 0
+        [keyIsDown, ~, ~] = KbCheck;
     end
     keyIsDown = 0;
 end

@@ -6,6 +6,10 @@
 
 cd 'C:\USER\Stefanie\EyeSound\'
 
+% Free exploration training 
+
+EyeSound_free
+
 % What number is the participant?
 iSub = 1;
 

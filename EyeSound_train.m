@@ -38,10 +38,10 @@ end
 % Load matrix with info on stimuli
 load('EyeSound_data.mat'); % Load the matrix that contains info about stimuli
 
-nTests = 3;
-nBlocks = 7; % Should be 7
+nTests = 1;
+nBlocks = 1; % Should be 7
 MaxResp = 2.5; % Maximum response time for questions in s
-AcquisitionDur = 20; % 20sec for acquisition trials, less for debugging
+AcquisitionDur = 5; % 20sec for acquisition trials, less for debugging
 ttCounter = 0; % This counter counts the blocks in a continuous way instead of restarting from 1 every time we change the level. This is important because to index the test trial matrix, we need this number
 columnX = []; % initialise this variable so it exists
 columnY = []; % initialise this variable so it exists
@@ -94,7 +94,7 @@ currentMouse = [-1 -1];
 soundPlayed = 0; % Sound identity (Factor)
 
 % This is needed for the animations
-speed = 7.5; % This is how fast animation moves!!!
+speed = 8; % This is how fast animation moves. In the lab, if the speed is 8, the duration of the animations will be 0.5 seconds
 ifi = Screen('GetFlipInterval', window); % You need this for the animations
 vbl=Screen('Flip', window); % You need this for the animations
 
@@ -327,7 +327,7 @@ end
 DrawFormattedText(window, 'El experimentador iniciará el entrenamiento.', 'center', 'center', white);
 Screen('Flip',window); % Show text above
 KbStrokeWait; % Wait for experimenter input
-Screen('Flip',window); % This last flip turns the screen black again
+[~, TrainingStart,~,~] = Screen('Flip',window); % This last flip turns the screen black again
 
 %%
 
@@ -335,7 +335,7 @@ Screen('Flip',window); % This last flip turns the screen black again
 %                               START EXPERIMENT
 % -------------------------------------------------------------------------
 
-TrainingStart = GetSecs;
+% TrainingStart = GetSecs;
 
 % Information for logfiles
 condition = 1; % Training is always active
@@ -360,8 +360,7 @@ end
 
 Screen('TextSize', window, 60);
 DrawFormattedText(window, 'NUEVOS SONIDOS', 'center', 'center',white);
-ContingencyStartTime = GetSecs;
-Screen('Flip',window);
+[~,ContingencyStartTime,~,~] = Screen('Flip',window);
 WaitSecs(0.5);
 
 % REPORT EVENT: CUE %
@@ -399,7 +398,7 @@ for iBlock = 1:nBlocks
         % do a check of calibration using driftcorrection
         EyelinkDoDriftCorrection(el);
     end
-    ContingencyStartTime = GetSecs;
+%     ContingencyStartTime = GetSecs;
     
     % Send trigger for new block, with info on trial type (acquisition,
     % 0), level type (1 or 2) and block number
@@ -430,49 +429,14 @@ for iBlock = 1:nBlocks
     
     
     [~ , ExploreCue,~,~] = Screen('Flip',window,0);
-    
-    Screen('Flip',window, (ExploreCue+0.5));
-    AcquisitionStartTime = GetSecs;
-    
-    % REPORT EVENT: CUE %
-    
-    % 1. Create trigger
-    
-    AcquisitionStartTrigger = 250;
-    
-    % 2. Send porttalk trigger
-    if port_exist == 1
-        porttalk(hex2dec('CFB8'), AcquisitionStartTrigger, 1000);
-    end
-    
-    % 3. Send Eyelink message
-    if dummymode == 0
-        Eyelink('Message', 'Start of acquisition trial.');
-        Eyelink('Message', 'TRIGGER %03d', AcquisitionStartTrigger);
-    end
-    
-    % 4. Write into logfile
-    fprintf(LOGFILEevents,'\n%d', iSub);
-    fprintf(LOGFILEevents,'\t%d', iContingency-1);
-    fprintf(LOGFILEevents,'\t%d', iBlock); % iBlock
-    fprintf(LOGFILEevents,'\tNaN'); % Trial number
-    fprintf(LOGFILEevents,'\t%d', condition); % Condition: actively or passively learned?
-    fprintf(LOGFILEevents,'\t%d', TrialType); % TrialType: 1 = acquisition, 2 = test
-    fprintf(LOGFILEevents,'\t%d', 1); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
-    fprintf(LOGFILEevents,'\t%d', AcquisitionStartTime-TrainingStart); % event time
-    fprintf(LOGFILEevents,'\tNaN'); % SoundID
-    fprintf(LOGFILEevents,'\tNaN'); % AnimationID
-    fprintf(LOGFILEevents,'\tNaN'); % MovDir
-    fprintf(LOGFILEevents,'\tNaN'); % Congruency
-    fprintf(LOGFILEevents,'\tNaN'); % Response
-    
-    % END REPORT
+    WaitSecs(0.5);
+%     AcquisitionStartTime = GetSecs
     
     % Start the animation
     % For explanations on how to do gaze contingent Eyelink stuff, check
     % https://www.youtube.com/watch?v=GjHZjgDbedQ&list=PLOdF-B36TwspkYxrpyJVNr5WBi19LpRwi&index=4
     % https://github.com/Psychtoolbox-3/Psychtoolbox-3/blob/master/Psychtoolbox/PsychHardware/EyelinkToolbox/EyelinkDemos/SR-ResearchDemo/EyelinkFixationWindow/EyelinkFixationWindow.m
-    AcquisitionStartTime = GetSecs;
+%     AcquisitionStartTime = GetSecs;
     conditional = 1; % Set conditional for acquisition start to TRUE
     % TRY THIS: Start recording eye position now, after the final drift
     % correction
@@ -509,10 +473,46 @@ for iBlock = 1:nBlocks
     
     % Prepare the timer that plays sound with delay of 1 sec
     soundTimer = timer;
-    soundTimer.StartDelay = 1;
+    soundTimer.StartDelay = 0.75;
     soundTimer.TimerFcn = @(x, y)eval(PsychPortAudio('Start', paHandle, 1));
     reportTimer = timer;
-    reportTimer.StartDelay = 1;
+    reportTimer.StartDelay = 0.75;
+    
+    [~,AcquisitionStartTime,~,~] = Screen('Flip',window); % Flip away from start cue
+    
+        % REPORT EVENT: CUE %
+    
+    % 1. Create trigger
+    
+    AcquisitionStartTrigger = 250;
+    
+    % 2. Send porttalk trigger
+    if port_exist == 1
+        porttalk(hex2dec('CFB8'), AcquisitionStartTrigger, 1000);
+    end
+    
+    % 3. Send Eyelink message
+    if dummymode == 0
+        Eyelink('Message', 'Start of acquisition trial.');
+        Eyelink('Message', 'TRIGGER %03d', AcquisitionStartTrigger);
+    end
+    
+    % 4. Write into logfile
+    fprintf(LOGFILEevents,'\n%d', iSub);
+    fprintf(LOGFILEevents,'\t%d', iContingency-1);
+    fprintf(LOGFILEevents,'\t%d', iBlock); % iBlock
+    fprintf(LOGFILEevents,'\tNaN'); % Trial number
+    fprintf(LOGFILEevents,'\t%d', condition); % Condition: actively or passively learned?
+    fprintf(LOGFILEevents,'\t%d', TrialType); % TrialType: 1 = acquisition, 2 = test
+    fprintf(LOGFILEevents,'\t%d', 1); % EventType: 1. cue 2. acquisition-sound 3. test-sound 4. response
+    fprintf(LOGFILEevents,'\t%d', AcquisitionStartTime-TrainingStart); % event time
+    fprintf(LOGFILEevents,'\tNaN'); % SoundID
+    fprintf(LOGFILEevents,'\tNaN'); % AnimationID
+    fprintf(LOGFILEevents,'\tNaN'); % MovDir
+    fprintf(LOGFILEevents,'\tNaN'); % Congruency
+    fprintf(LOGFILEevents,'\tNaN'); % Response
+    
+    % END REPORT
     
     while conditional == 1 % start while loop for acquisition trials
         conditional = (GetSecs-AcquisitionStartTime < AcquisitionDur); % Active trials end when the time is up
@@ -1617,9 +1617,11 @@ for iBlock = 1:nBlocks
         end % if-statement for movement moveDirectionections
         
         % Present test sound
+        WaitSecs(0.75);
+%         testSoundTime = GetSecs;
+        testSoundTime = PsychPortAudio('Start', paHandle, 1);
+        tic
         WaitSecs(1);
-        testSoundTime = GetSecs;
-        PsychPortAudio('Start', paHandle, 1);
         
         % REPORT EVENT: TEST SOUND %
         
@@ -1672,9 +1674,9 @@ for iBlock = 1:nBlocks
             DrawFormattedText(window, 'YES    ?      NO', 'center', 'center', white);
         end
         
-        questionTime = GetSecs;
-        Screen('Flip',window,(testSoundTime+1)); % I made this 2 seconds because 1 second felt super fast
-        
+%         questionTime = GetSecs;
+        [~,questionTime,~,~] = Screen('Flip',window); % I made this 2 seconds because 1 second felt super fast
+        toc
         % REPORT EVENT: CUE (Question) %
         
         % 1. Create trigger
