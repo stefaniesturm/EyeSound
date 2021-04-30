@@ -10,14 +10,14 @@ function EyeSound_train(iSub, iContingency)
 %                                  SETUP
 % -------------------------------------------------------------------------
 %
-location = 1; % 1 for home, 2 for lab
+location = 2; % 1 for home, 2 for lab
 % Do you want to control the amount of sounds played during acquisition by
 % making the cursor disappear for one second after a sound is played?
 % Indicate hardware used for this run
-nano_exist = 0; % Turn on if you want to use Nanopad instead of keyboard
-port_exist = 0; % Never during training!
-headphones = 0; % In the lab, this should be 1, at home, it should be 0
-dummymode = 1; % 0 if you are using eye tracker, 1 if you are using mouse
+nano_exist = 1; % Turn on if you want to use Nanopad instead of keyboard
+port_exist = 1; % Never during training!
+headphones = 1; % In the lab, this should be 1, at home, it should be 0
+dummymode = 0; % 0 if you are using eye tracker, 1 if you are using mouse
 training = 1;
 if location == 2
     % In the lab
@@ -38,10 +38,10 @@ end
 % Load matrix with info on stimuli
 load('EyeSound_data.mat'); % Load the matrix that contains info about stimuli
 
-nTests = 1;
-nBlocks = 1; % Should be 7
+nTests = 3;
+nBlocks = 7; % Should be 7
 MaxResp = 2.5; % Maximum response time for questions in s
-AcquisitionDur = 5; % 20sec for acquisition trials, less for debugging
+AcquisitionDur = 20; % 20sec for acquisition trials, less for debugging
 ttCounter = 0; % This counter counts the blocks in a continuous way instead of restarting from 1 every time we change the level. This is important because to index the test trial matrix, we need this number
 columnX = []; % initialise this variable so it exists
 columnY = []; % initialise this variable so it exists
@@ -300,7 +300,7 @@ end
 Instr1 = ['(Pulse una flecha para seguir.)'];
 Instr2 = ['Bienvenido/a al juego EyeSound!'];
 Instr3 = ['Empezamos con el entrenamiento.'];
-Instr4 = ['Recuerda: Solo intenta controlar el círculo blanco \ncuando veas la palabra "CONTROL". \nEn rondas sin control, simplemente relájate \ny observa cómo se mueve el círculo \ne intenta recordar los sonidos.'];
+Instr4 = ['Recuerda: Solo intenta controlar el círculo blanco \ncuando veas la palabra "EXPLORAR". \nEn rondas con "OBSERVAR", simplemente relájate \ny observa cómo se mueve el círculo \ne intenta recordar los sonidos.'];
 Instr5 = ['Primero, explora los sonidos. \nLuego, contesta a las preguntas \ncon SI o NO, usando las flechas.'];
 Instr6 = ['¿Listo/a?'];
 

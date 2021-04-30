@@ -42,7 +42,7 @@ screenNumber=max(Screen('Screens'));
 white = [1 1 1];
 black = [0 0 0];
 red = [1 0 0];
-window_size = [0 0 400 400]; % small window for debugging; comment out if fullscreen is wanted
+%window_size = [0 0 400 400]; % small window for debugging; comment out if fullscreen is wanted
 
 % Open an on screen window and color it black
 % try

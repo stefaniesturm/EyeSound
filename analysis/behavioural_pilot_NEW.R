@@ -31,7 +31,7 @@ dataset[, "Correctness"] <-
 
 # Check if response was correct by comparing two columns
 for (i in 1:nrow(dataset)) {
-  dataset[i, "Correctness"] <-
+  dataset[i, "Correctness"] <-c
     dataset[i, "Congruency"] == dataset[i, "Response"]
 }
 
