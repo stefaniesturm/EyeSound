@@ -3,7 +3,6 @@
 
 library(dplyr)
 library(ggplot2)
-library(scales)
 
 setwd("~/Documents/Logfiles/events/")
 
