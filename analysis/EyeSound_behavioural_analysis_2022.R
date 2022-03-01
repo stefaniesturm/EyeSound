@@ -7,11 +7,10 @@
 library(rstatix)
 library(ggplot2)
 
-# Set working directory
-setwd("D:/EyeSound/logfiles/")
+setwd("~/Uni/EyeSound/logfiles/")
 
 # Load the data from logfiles
-file_list <- list.files(path ="D:/EyeSound/logfiles/")  
+file_list <- list.files(path ="~/Uni/EyeSound/logfiles/")  
 
 # Merge the test files into one dataframe
 for (file in file_list) {
@@ -82,7 +81,7 @@ for(iSub in 2:26) {
 }
 
 # Clean up a little 
-rm(tests, acquisition_trials, test_trials, dataset, sounds_played, enriched_test_trials)
+rm(tests, acquisition_trials, test_trials, dataset, sounds_played)
 
 # Now that this is done, we want to drop the test trials that presented an unknown sound and plot the pruned data for each subject.
 test_trials_valid <- subset(enriched_test_trials, SoundKnown == TRUE)
@@ -92,14 +91,14 @@ remaining <- c("Subject", "Contingency", "Block", "Condition", "SoundID", "Corre
 test_trials_valid <- test_trials_valid[remaining]
 
 # Write the new data set as a .csv file
-write.csv2(test_trials_valid, "D:/EyeSound/EyeSound_results_clean.csv")
+write.csv2(test_trials_valid, "results_clean.csv")
 
 ## Summarise the data ##
 
 # NADIA
 
 # Uncomment if you want to start here 
-test_trials_valid <- read.csv("D:/EyeSound/EyeSound_results_clean.csv", sep=";")
+# test_trials_valid <- read.csv("D:/EyeSound/EyeSound_results_clean.csv", sep=";")
 remaining <- c("Subject", "Contingency", "Block", "Condition", "SoundID", "Correctness")
 test_trials_valid <- test_trials_valid[remaining]
 
@@ -218,7 +217,7 @@ ggplot(summary_block_condition, aes(x = Block, y = mean, colour = Condition)) +
   geom_errorbar(aes(ymin=mean-sd, ymax=mean+sd), width=.2,position=position_dodge(.05)) +
   scale_x_discrete(name = "Bloque") + 
   scale_y_continuous((name = "Porcentaje de acierto")) +
-  scale_colour_discrete(name = "Condición", labels=c("activa", "pasiva")) + 
+  scale_colour_discrete(name = "Condici?n", labels=c("activa", "pasiva")) + 
   theme_bw()
 
 ## Run the ANOVA ##
