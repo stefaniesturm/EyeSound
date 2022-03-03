@@ -1,0 +1,56 @@
+% Take the difference of the averages using ft_math
+cfg           = [];
+cfg.operation = 'subtract';
+cfg.parameter = 'avg';
+raweffectFICvsFC = ft_math(cfg, avgFIC, avgFC);
+
+% Make a vector of all p-values associated with the clusters from ft_timelockstatistics.
+pos_cluster_pvals = [stat.posclusters(:).prob];
+
+% Then, find which clusters are deemed interesting to visualize, here we use a cutoff criterion based on the
+% cluster-associated p-value, and take a 5% two-sided cutoff (i.e. 0.025 for the positive and negative clusters,
+% respectively
+pos_clust = find(pos_cluster_pvals < 0.025);
+pos       = ismember(stat.posclusterslabelmat, pos_clust);
+
+% and now for the negative clusters...
+neg_cluster_pvals = [stat.negclusters(:).prob];
+neg_clust         = find(neg_cluster_pvals < 0.025);
+neg               = ismember(stat.negclusterslabelmat, neg_clust);
+
+timestep      = 0.05; % timestep between time windows for each subplot (in seconds)
+sampling_rate = dataFC_LP.fsample; % Data has a temporal resolution of 300 Hz
+sample_count  = length(stat.time);
+% number of temporal samples in the statistics object
+j = [0:timestep:1]; % Temporal endpoints (in seconds) of the ERP average computed in each subplot
+m = [1:timestep*sampling_rate:sample_count]; % temporal endpoints in M/EEG samples
+
+% First ensure the channels to have the same order in the average and in the statistical output.
+% This might not be the case, because ft_math might shuffle the order
+[i1,i2] = match_str(raweffectFICvsFC.label, stat.label);
+
+for k = 1:20
+   subplot(4,5,k);
+   cfg = [];
+   cfg.xlim = [j(k) j(k+1)];   % time interval of the subplot
+   cfg.zlim = [-2.5e-13 2.5e-13];
+   % If a channel is in a to-be-plotted cluster, then
+   % the element of pos_int with an index equal to that channel
+   % number will be set to 1 (otherwise 0).
+
+   % Next, check which channels are in the clusters over the
+   % entire time interval of interest.
+   pos_int = zeros(numel(raweffectFICvsFC.label),1);
+   neg_int = zeros(numel(raweffectFICvsFC.label),1);
+   pos_int(i1) = all(pos(i2, m(k):m(k+1)), 2);
+   neg_int(i1) = all(neg(i2, m(k):m(k+1)), 2);
+
+   cfg.highlight   = 'on';
+   % Get the index of the to-be-highlighted channel
+   cfg.highlightchannel = find(pos_int | neg_int);
+   cfg.comment     = 'xlim';
+   cfg.commentpos  = 'title';
+   cfg.layout      = 'CTF151_helmet.mat';
+   cfg.interactive = 'no';
+   ft_topoplotER(cfg, raweffectFICvsFC);
+end
